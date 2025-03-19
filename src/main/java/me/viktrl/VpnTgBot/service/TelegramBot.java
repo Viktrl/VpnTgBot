@@ -33,9 +33,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.sql.Timestamp;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 import org.json.simple.JSONObject;
 
@@ -225,29 +223,28 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void showUserTrafficUsed(Message message) {
         var chatId = message.getChatId();
+        var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
         JSONParser parser = new JSONParser();
+
         try {
-            var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
             JSONObject jsonObject = (JSONObject) parser.parse(getResponse("/metrics/transfer", "GET", null).responseString);
-            JSONObject jsonObjectBytesTransferredByUserId = (JSONObject)jsonObject.get("bytesTransferredByUserId");
+            JSONObject jsonObjectBytesTransferredByUser = (JSONObject)jsonObject.get("bytesTransferredByUserId");
+            Map<String, String> convertedJsonObjectBytesTransferredByUser = new TreeMap<>(Comparator.reverseOrder());
+//            JSONObject convertedJsonObjectBytesTransferredByUser = new JSONObject();
 
-            if(jsonObjectBytesTransferredByUserId.get(savedUserFromDb.getToken()) != null) {
-                long trafficUsedByUser = (long)jsonObjectBytesTransferredByUserId.get(savedUserFromDb.getToken());
-                long trafficUsedByUserInMegaBytes = trafficUsedByUser / 1024 / 1024;
-                startCommand(chatId, "Использовано МегаБайт: " + String.valueOf(trafficUsedByUserInMegaBytes));
+            for (Object token : jsonObjectBytesTransferredByUser.keySet()) {
+                String clientKey = (String) token;
+                long trafficUsedByUser = (long)jsonObjectBytesTransferredByUser.get(clientKey);
+                double gb = (double) trafficUsedByUser / (1024 * 1024 * 1024);
+                convertedJsonObjectBytesTransferredByUser.put(clientKey, String.format("%.2f Gb", gb));
+            }
+
+            if(convertedJsonObjectBytesTransferredByUser.get(savedUserFromDb.getToken()) != null) {
+                startCommand(chatId, "Использовано трафика: " + String.valueOf(convertedJsonObjectBytesTransferredByUser.get(savedUserFromDb.getToken())));
             } else {
-                JSONObject convertedClients = new JSONObject();
-                for (Object token : jsonObjectBytesTransferredByUserId.keySet()) {
-                    String clientKey = (String) token;
-                    long trafficUsedByUser = (long)jsonObjectBytesTransferredByUserId.get(clientKey);
-                    double mb = (double) trafficUsedByUser / (1024 * 1024);
-                    convertedClients.put(clientKey, String.format("%.2f MB", mb));
-                }
-
                 Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                String prettyJson = gson.toJson(convertedClients);
-
-                startCommand(chatId, prettyJson);
+                String prettyJson = gson.toJson(convertedJsonObjectBytesTransferredByUser);
+                startCommand(chatId, "Использовано трафика:\n" + prettyJson);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -260,9 +257,9 @@ public class TelegramBot extends TelegramLongPollingBot {
             URL url = new URL("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA" + requestAddress);
 
             HttpsURLConnection httpConn = (HttpsURLConnection) url.openConnection();
-
             httpConn.setRequestMethod(method);
             removeSSLVerifier(httpConn);
+
             if (writableJson != null) {
                 httpConn.setDoOutput(true);
                 httpConn.setRequestProperty("Content-Type", "application/json");
