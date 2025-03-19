@@ -1,10 +1,17 @@
 package me.viktrl.VpnTgBot.service;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import me.dynomake.outline.OutlineWrapper;
+import me.dynomake.outline.gson.GsonUtil;
+import me.dynomake.outline.implementation.model.Response;
+import me.dynomake.outline.model.OutlineServer;
 import me.viktrl.VpnTgBot.config.BotConfig;
 import me.viktrl.VpnTgBot.model.User;
 import me.viktrl.VpnTgBot.model.UserRepository;
+import org.json.simple.parser.JSONParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -16,9 +23,21 @@ import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
+import javax.net.ssl.*;
+import java.io.FileReader;
+import java.io.InputStream;
+import java.io.OutputStreamWriter;
+import java.net.URL;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.cert.CertificateException;
+import java.security.cert.X509Certificate;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
+
+import org.json.simple.JSONObject;
 
 @Slf4j
 @Component
@@ -26,6 +45,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     private UserRepository userRepository;
     final BotConfig config;
+    OutlineWrapper outlineWrapper = OutlineWrapper.create("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA");
 
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
@@ -36,7 +56,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         listCommand.add(new BotCommand("/registerkey", "Создать ВПН"));
         listCommand.add(new BotCommand("/myaccount", "Мои данные"));
         listCommand.add(new BotCommand("/help", "Инструкция"));
-//        listCommand.add(new BotCommand("/settings", "Настройки"));
+        listCommand.add(new BotCommand("/traffic", "Потребление ресурсов сети"));
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
@@ -81,6 +101,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                             "Дополнительная ссылка для Android: https://s3.amazonaws.com/outline-releases/client/android/stable/Outline-Client.apk\n\n" +
                             "3. Откройте клиент Outline. Если ваш ключ доступа определился автоматически, нажмите \"Подключиться\". Если этого не произошло, вставьте ключ в поле и нажмите \"Подключиться\".\n\n" +
                             "Теперь у вас есть доступ к свободному интернету. Чтобы убедиться, что вы подключились к серверу, зайдите на 2ip.ru, и проверьте IP.");
+                    break;
+                case "/traffic":
+                    showUserTrafficUsed(update.getMessage());
                     break;
                 default: startCommand(chatId, "Этой команды не существует");
             }
@@ -127,7 +150,6 @@ public class TelegramBot extends TelegramLongPollingBot {
             var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
 
             if(savedUserFromDb.getToken() == null) {
-                OutlineWrapper outlineWrapper = OutlineWrapper.create("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA");
                 int newKeyId = outlineWrapper.generateKey().id;
 
                 savedUserFromDb.setToken(String.valueOf(outlineWrapper.getKey(newKeyId).id));
@@ -163,10 +185,13 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
+
+            System.out.println("sout = " + getResponse("/metrics/transfer", "GET", null).responseString);
+
             if(!userRepository.findById(message.getFrom().getId()).isEmpty()) {
                 String showUserAnswer = "Логин: " + savedUserFromDb.getUsername() + "\n" +
                         "ID: " + savedUserFromDb.getToken() + "\n" +
-                        "Ключ для ВПН: " + savedUserFromDb.getTokenKey();
+                        "Ключ для ВПН: " + savedUserFromDb.getTokenKey() + "\n";
                 try {
                     execute(new SendMessage(String.valueOf(chatId), showUserAnswer));
                 } catch (TelegramApiException e) {
@@ -181,8 +206,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
         } catch (Exception e) {
             try {
-                execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались.\n" +
-                        "Используйте команду /start"));
+                execute(new SendMessage(String.valueOf(chatId), "Что то пошло не так."));
+                System.out.println("sout = " + String.valueOf(outlineWrapper.getServerInformation().accessKeyDataLimit));
             } catch (TelegramApiException e2) {
                 log.error("Error yopta: " + e2.getMessage());
             }
@@ -196,5 +221,105 @@ public class TelegramBot extends TelegramLongPollingBot {
         String showUserKeyAnswer = savedUserFromDb.getTokenKey();
 
         startCommand(chatId, showUserKeyAnswer); //TODO обернуть в try catch
+    }
+
+    private void showUserTrafficUsed(Message message) {
+        var chatId = message.getChatId();
+        JSONParser parser = new JSONParser();
+        try {
+            var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
+            JSONObject jsonObject = (JSONObject) parser.parse(getResponse("/metrics/transfer", "GET", null).responseString);
+            JSONObject jsonObjectBytesTransferredByUserId = (JSONObject)jsonObject.get("bytesTransferredByUserId");
+
+            if(jsonObjectBytesTransferredByUserId.get(savedUserFromDb.getToken()) != null) {
+                long trafficUsedByUser = (long)jsonObjectBytesTransferredByUserId.get(savedUserFromDb.getToken());
+                long trafficUsedByUserInMegaBytes = trafficUsedByUser / 1024 / 1024;
+                startCommand(chatId, "Использовано МегаБайт: " + String.valueOf(trafficUsedByUserInMegaBytes));
+            } else {
+                JSONObject convertedClients = new JSONObject();
+                for (Object token : jsonObjectBytesTransferredByUserId.keySet()) {
+                    String clientKey = (String) token;
+                    long trafficUsedByUser = (long)jsonObjectBytesTransferredByUserId.get(clientKey);
+                    double mb = (double) trafficUsedByUser / (1024 * 1024);
+                    convertedClients.put(clientKey, String.format("%.2f MB", mb));
+                }
+
+                Gson gson = new GsonBuilder().setPrettyPrinting().create();
+                String prettyJson = gson.toJson(convertedClients);
+
+                startCommand(chatId, prettyJson);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    private Response getResponse(@NonNull String requestAddress, @NonNull String method, String writableJson) {
+        try {
+            URL url = new URL("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA" + requestAddress);
+
+            HttpsURLConnection httpConn = (HttpsURLConnection) url.openConnection();
+
+            httpConn.setRequestMethod(method);
+            removeSSLVerifier(httpConn);
+            if (writableJson != null) {
+                httpConn.setDoOutput(true);
+                httpConn.setRequestProperty("Content-Type", "application/json");
+                OutputStreamWriter writer = new OutputStreamWriter(httpConn.getOutputStream());
+                writer.write(writableJson);
+                writer.flush();
+                writer.close();
+                httpConn.getOutputStream().close();
+            }
+
+            InputStream responseStream = httpConn.getResponseCode() / 100 == 2
+                    ? httpConn.getInputStream()
+                    : httpConn.getErrorStream();
+            Scanner s = new Scanner(responseStream).useDelimiter("\\A");
+            String response = s.hasNext() ? s.next() : "";
+
+            return new Response(httpConn.getResponseCode(), response);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    private void removeSSLVerifier(@NonNull HttpsURLConnection connection) {
+        TrustManager[] trustAllCerts = new TrustManager[]{
+                new X509TrustManager() {
+                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                        return null;
+                    }
+
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] arg0, String arg1)
+                            throws CertificateException {
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] arg0, String arg1)
+                            throws CertificateException {
+                    }
+                }
+        };
+
+        SSLContext sc = null;
+        try {
+            sc = SSLContext.getInstance("SSL");
+        } catch (NoSuchAlgorithmException e) {
+            System.out.println(e.getMessage());
+        }
+        try {
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+        } catch (KeyManagementException e) {
+            System.out.println(e.getMessage());
+        }
+        connection.setSSLSocketFactory(sc.getSocketFactory());
+
+        HostnameVerifier validHosts = (arg0, arg1) -> true;
+
+        connection.setHostnameVerifier(validHosts);
     }
 }
