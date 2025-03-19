@@ -1,5 +1,8 @@
 package me.viktrl.VpnTgBot.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import lombok.NonNull;
@@ -24,9 +27,7 @@ import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScope
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import javax.net.ssl.*;
-import java.io.FileReader;
-import java.io.InputStream;
-import java.io.OutputStreamWriter;
+import java.io.*;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
@@ -44,6 +45,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     private UserRepository userRepository;
     final BotConfig config;
     OutlineWrapper outlineWrapper = OutlineWrapper.create("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA");
+    private static Map<Integer, Long> previousData = new HashMap<>(); // Храним прошлые данные
+    private static final String DATA_FILE = "traffic_data.json"; // Файл для сохранения данных
 
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
@@ -227,19 +230,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         JSONParser parser = new JSONParser();
 
         try {
-            JSONObject jsonObject = (JSONObject) parser.parse(getResponse("/metrics/transfer", "GET", null).responseString);
-            JSONObject jsonObjectBytesTransferredByUser = (JSONObject)jsonObject.get("bytesTransferredByUserId");
-            Map<String, String> convertedJsonObjectBytesTransferredByUser = new TreeMap<>(Comparator.reverseOrder());
-//            JSONObject convertedJsonObjectBytesTransferredByUser = new JSONObject();
-
-            for (Object token : jsonObjectBytesTransferredByUser.keySet()) {
-                String clientKey = (String) token;
-                long trafficUsedByUser = (long)jsonObjectBytesTransferredByUser.get(clientKey);
-                double gb = (double) trafficUsedByUser / (1024 * 1024 * 1024);
-                convertedJsonObjectBytesTransferredByUser.put(clientKey, String.format("%.2f Gb", gb));
-            }
-
-            if(convertedJsonObjectBytesTransferredByUser.get(savedUserFromDb.getToken()) != null) {
+            if(fetchTrafficData().get(savedUserFromDb.getToken()) != null) {
                 startCommand(chatId, "Использовано трафика: " + String.valueOf(convertedJsonObjectBytesTransferredByUser.get(savedUserFromDb.getToken())));
             } else {
                 Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -252,35 +243,57 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     }
 
-    private Response getResponse(@NonNull String requestAddress, @NonNull String method, String writableJson) {
-        try {
-            URL url = new URL("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA" + requestAddress);
+//    private Response getResponse(@NonNull String requestAddress, @NonNull String method, String writableJson) {
+//        try {
+//            URL url = new URL("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA" + requestAddress);
+//
+//            HttpsURLConnection httpConn = (HttpsURLConnection) url.openConnection();
+//            httpConn.setRequestMethod(method);
+//            removeSSLVerifier(httpConn);
+//
+//            if (writableJson != null) {
+//                httpConn.setDoOutput(true);
+//                httpConn.setRequestProperty("Content-Type", "application/json");
+//                OutputStreamWriter writer = new OutputStreamWriter(httpConn.getOutputStream());
+//                writer.write(writableJson);
+//                writer.flush();
+//                writer.close();
+//                httpConn.getOutputStream().close();
+//            }
+//
+//            InputStream responseStream = httpConn.getResponseCode() / 100 == 2
+//                    ? httpConn.getInputStream()
+//                    : httpConn.getErrorStream();
+//            Scanner s = new Scanner(responseStream).useDelimiter("\\A");
+//            String response = s.hasNext() ? s.next() : "";
+//
+//            return new Response(httpConn.getResponseCode(), response);
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//            return null;
+//        }
+//    }
 
-            HttpsURLConnection httpConn = (HttpsURLConnection) url.openConnection();
-            httpConn.setRequestMethod(method);
-            removeSSLVerifier(httpConn);
+    private Map<String, Long> fetchTrafficData() throws IOException {
+        Map<String, Long> trafficData = new HashMap<>();
 
-            if (writableJson != null) {
-                httpConn.setDoOutput(true);
-                httpConn.setRequestProperty("Content-Type", "application/json");
-                OutputStreamWriter writer = new OutputStreamWriter(httpConn.getOutputStream());
-                writer.write(writableJson);
-                writer.flush();
-                writer.close();
-                httpConn.getOutputStream().close();
+        HttpsURLConnection connection = (HttpsURLConnection) new URL("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA/metrics/transfer").openConnection();
+        connection.setRequestMethod("GET");
+        removeSSLVerifier(connection);
+
+        ObjectMapper objectMapper = new ObjectMapper();
+        JsonNode jsonResponse = objectMapper.readTree(connection.getInputStream());
+
+        JsonNode userTraffic = jsonResponse.get("bytesTransferredByUserId");
+        if (userTraffic != null) {
+            for (Iterator<String> it = userTraffic.fieldNames(); it.hasNext(); ) {
+                String userId = it.next();
+                long bytesTransferred = userTraffic.get(userId).asLong();
+                trafficData.put(String.valueOf(userId), bytesTransferred);
             }
-
-            InputStream responseStream = httpConn.getResponseCode() / 100 == 2
-                    ? httpConn.getInputStream()
-                    : httpConn.getErrorStream();
-            Scanner s = new Scanner(responseStream).useDelimiter("\\A");
-            String response = s.hasNext() ? s.next() : "";
-
-            return new Response(httpConn.getResponseCode(), response);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
         }
+
+        return trafficData;
     }
 
     private void removeSSLVerifier(@NonNull HttpsURLConnection connection) {
@@ -318,5 +331,51 @@ public class TelegramBot extends TelegramLongPollingBot {
         HostnameVerifier validHosts = (arg0, arg1) -> true;
 
         connection.setHostnameVerifier(validHosts);
+    }
+
+    private void checkAndNotify() {
+        try {
+            Map<Integer, Long> currentData = fetchTrafficData();
+
+            if (!previousData.isEmpty()) {
+                for (Integer userId : currentData.keySet()) {
+                    long previous = previousData.getOrDefault(userId, 0L);
+                    long current = currentData.get(userId);
+                    long delta = current - previous;
+
+                    double deltaInGb = delta / 1_073_741_824.0;
+//                    sendMessage(userId, String.format("Ваше потребление трафика за сутки: %.2f GB", deltaInGb));
+
+//                    System.out.println("sout = " + userId + ", " + String.format("Ваше потребление трафика за сутки: %.2f GB", deltaInGb));
+                }
+            }
+
+            previousData = currentData;
+            savePreviousData(); // Сохраняем новые данные
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void savePreviousData() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.writeValue(new File(DATA_FILE), previousData);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void loadPreviousData() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            File file = new File(DATA_FILE);
+            if (file.exists()) {
+                previousData = objectMapper.readValue(file, new TypeReference<Map<Integer, Long>>() {});
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
