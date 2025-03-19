@@ -45,7 +45,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private UserRepository userRepository;
     final BotConfig config;
     OutlineWrapper outlineWrapper = OutlineWrapper.create("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA");
-    private static Map<Integer, Long> previousData = new HashMap<>(); // Храним прошлые данные
+    private static Map<String, Long> previousData = new HashMap<>(); // Храним прошлые данные
     private static final String DATA_FILE = "traffic_data.json"; // Файл для сохранения данных
 
     public TelegramBot(BotConfig config) {
@@ -187,8 +187,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
 
-            System.out.println("sout = " + getResponse("/metrics/transfer", "GET", null).responseString);
-
             if(!userRepository.findById(message.getFrom().getId()).isEmpty()) {
                 String showUserAnswer = "Логин: " + savedUserFromDb.getUsername() + "\n" +
                         "ID: " + savedUserFromDb.getToken() + "\n" +
@@ -231,10 +229,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             if(fetchTrafficData().get(savedUserFromDb.getToken()) != null) {
-                startCommand(chatId, "Использовано трафика: " + String.valueOf(convertedJsonObjectBytesTransferredByUser.get(savedUserFromDb.getToken())));
+                startCommand(chatId, "Использовано трафика: " + String.valueOf(fetchTrafficData().get(savedUserFromDb.getToken())));
             } else {
                 Gson gson = new GsonBuilder().setPrettyPrinting().create();
-                String prettyJson = gson.toJson(convertedJsonObjectBytesTransferredByUser);
+                String prettyJson = gson.toJson(fetchTrafficData());
                 startCommand(chatId, "Использовано трафика:\n" + prettyJson);
             }
         } catch (Exception e) {
@@ -335,10 +333,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void checkAndNotify() {
         try {
-            Map<Integer, Long> currentData = fetchTrafficData();
+            Map<String, Long> currentData = fetchTrafficData();
 
             if (!previousData.isEmpty()) {
-                for (Integer userId : currentData.keySet()) {
+                for (String userId : currentData.keySet()) {
                     long previous = previousData.getOrDefault(userId, 0L);
                     long current = currentData.get(userId);
                     long delta = current - previous;
@@ -372,7 +370,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             ObjectMapper objectMapper = new ObjectMapper();
             File file = new File(DATA_FILE);
             if (file.exists()) {
-                previousData = objectMapper.readValue(file, new TypeReference<Map<Integer, Long>>() {});
+                previousData = objectMapper.readValue(file, new TypeReference<Map<String, Long>>() {});
             }
         } catch (IOException e) {
             e.printStackTrace();
