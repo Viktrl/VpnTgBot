@@ -55,6 +55,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     final BotConfig config;
     OutlineWrapper outlineWrapper = OutlineWrapper.create("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA");
     private static Map<String, Long> previousData = new HashMap<>(); // Храним прошлые данные
+    private static final String DATA_FILE = "traffic_data.json"; // Файл для сохранения данных
 
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
@@ -69,6 +70,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
+            scheduleDailyTask(14,40);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
         }
@@ -112,6 +114,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                             "3. Откройте клиент Outline. Если ваш ключ доступа определился автоматически, нажмите \"Подключиться\". Если этого не произошло, вставьте ключ в поле и нажмите \"Подключиться\".\n\n" +
                             "Теперь у вас есть доступ к свободному интернету. Чтобы убедиться, что вы подключились к серверу, зайдите на 2ip.ru, и проверьте IP.");
                     break;
+//                case "/sendusermessage":
+//                    sendUserMessageAboutTrafficUsed(update.getMessage());
+//                    break;
                 default:
                     startCommand(chatId, "Этой команды не существует");
             }
@@ -290,21 +295,79 @@ public class TelegramBot extends TelegramLongPollingBot {
         return trafficData;
     }
 
-    private void sendUserMessageAboutTrafficUsed(Message message) throws IOException {
+    public void sendUserMessageAboutTrafficUsed() throws IOException {
         var chatId = message.getChatId();
         var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
         Map<String, Long> currentData = fetchTrafficData();
 
         try {
+            loadPreviousData();
             long previous = previousData.getOrDefault("56", 0L);
             long current = currentData.get("56");
             long delta = current - previous;
 
             double deltaInGb = delta / 1_073_741_824.0;
 
-            startCommand(6503757022L, String.format("Ваше потребление трафика за сутки: %.2f GB", deltaInGb));
+            if (deltaInGb > 5.0) {
+                startCommand(245344798, String.format("Ваше потребление трафика за сутки: %.2f GB", deltaInGb));
+            } else {
+                System.out.println("sout = 5 gb nety");
+            }
+
             previousData = currentData;
+//            savePreviousData();
         } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void scheduleDailyTask(int targetHour, int targetMinute) {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+        Runnable task = () -> {
+            System.out.println("Запуск задачи: " + LocalDateTime.now());
+            try {
+                sendUserMessageAboutTrafficUsed();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        };
+
+        long initialDelay = calculateInitialDelay(targetHour, targetMinute);
+        long period = 24 * 60 * 60; // 24 часа в секундах
+
+        scheduler.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
+    }
+
+    private long calculateInitialDelay(int targetHour, int targetMinute) {
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Europe/Moscow"));
+        ZonedDateTime nextRun = now.withHour(targetHour).withMinute(targetMinute).withSecond(0);
+
+        if (now.compareTo(nextRun) > 0) { // Если текущее время уже после 10:00, берем завтра
+            nextRun = nextRun.plusDays(1);
+        }
+
+        return Duration.between(now, nextRun).getSeconds();
+    }
+
+    private static void savePreviousData() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.writeValue(new File(DATA_FILE), previousData);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static void loadPreviousData() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            File file = new File(DATA_FILE);
+            if (file.exists()) {
+                previousData = objectMapper.readValue(file, new TypeReference<Map<String, Long>>() {
+                });
+            }
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
