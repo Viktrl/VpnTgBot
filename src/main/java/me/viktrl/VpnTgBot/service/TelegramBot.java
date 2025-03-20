@@ -72,7 +72,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(20, 44);
+            scheduleDailyTask(9, 0);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
         }
@@ -299,25 +299,22 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     public void sendUserMessageAboutTrafficUsed() throws IOException {
-        List<String> listOfChatIds = new ArrayList<>();
-        userRepository.findAll().forEach(user -> {
-                    listOfChatIds.add(String.valueOf(user.getChatId()));
-                }
-        );
+        Map<String, Long> listOfActiveUsers = new HashMap<>();
 
-        List<String> listOfTokens = new ArrayList<>();
-        userRepository.findAll().forEach(user -> {
-                    listOfTokens.add(String.valueOf(user.getToken()));
+        userRepository.findAll().forEach(el -> {
+            try {
+                if (fetchTrafficData().containsKey(el.getToken())) {
+                    listOfActiveUsers.put(el.getToken(), el.getChatId());
                 }
-        );
-        listOfTokens.retainAll(fetchTrafficData().keySet());
-
-        Map<String, Long> currentData = fetchTrafficData();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
 
         try {
 //            loadPreviousData();
 
-            for (String listOfToken : listOfTokens) {
+            for (String activeToken : listOfActiveUsers.keySet()) {
 //                long previous = previousData.getOrDefault(listOfChatIds.get(i), 0L);
 //                long current = currentData.get(listOfChatIds.get(i));
 //                long delta = current - previous;
@@ -334,9 +331,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 //                        .stream()
 //                        .filter(entry -> listOfTokens.contains(entry.getKey()))
 //                        .collect(HashMap::new, (m, v) -> m.put(v.getKey(), v.getValue()), HashMap::putAll);
-                Long trafficByUser = fetchTrafficData().get(listOfToken);
+
+                Long trafficByUser = fetchTrafficData().get(activeToken);
                 Double trafficByUserInGb = trafficByUser / 1_073_741_824.0;
-                startCommand(245344798L, "Использовано трафика: " + String.format("%.2f GB", trafficByUserInGb));
+                startCommand(listOfActiveUsers.get(activeToken), "Использовано трафика: " + String.format("%.2f GB", trafficByUserInGb));
                 //Long.parseLong(listOfChatIds.get(i))
             }
 
