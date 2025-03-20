@@ -251,7 +251,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             if (!userRepository.findById(message.getFrom().getId()).isEmpty()) {
-                startCommand(chatId, showUserKeyAnswer); //TODO обернуть в try catch и сделать проверку что чел зарегался
+                startCommand(chatId, showUserKeyAnswer);
             } else {
                 try {
                     execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались. Используйте команду /start"));
@@ -307,7 +307,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 
     private void removeSSLVerifier(@NonNull HttpsURLConnection connection) {
