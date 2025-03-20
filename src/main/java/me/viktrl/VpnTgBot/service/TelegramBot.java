@@ -198,9 +198,9 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void showUserAccount(Message message) {
         var chatId = message.getChatId();
-        var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
 
         try {
+            var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
             if (!userRepository.findById(message.getFrom().getId()).isEmpty()) {
                 try {
                     if (message.getChat().getUserName().equals("unmaskked")) {
@@ -238,14 +238,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
             } else {
                 try {
-                    execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались. Используйте команду /start"));
+                    execute(new SendMessage(String.valueOf(chatId), "Что то пошло не так."));
                 } catch (TelegramApiException e) {
                     log.error("Error yopta: " + e.getMessage());
                 }
             }
         } catch (Exception e) {
             try {
-                execute(new SendMessage(String.valueOf(chatId), "Что то пошло не так."));
+                execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались. Используйте команду /start"));
             } catch (TelegramApiException e2) {
                 log.error("Error yopta: " + e2.getMessage());
             }
@@ -254,22 +254,23 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void showUserKey(Message message) {
         var chatId = message.getChatId();
-        var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
-        String showUserKeyAnswer = savedUserFromDb.getTokenKey();
 
         try {
+            var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
+            String showUserKeyAnswer = savedUserFromDb.getTokenKey();
+
             if (!userRepository.findById(message.getFrom().getId()).isEmpty()) {
                 startCommand(chatId, showUserKeyAnswer);
             } else {
                 try {
-                    execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались. Используйте команду /start"));
+                    execute(new SendMessage(String.valueOf(chatId), "Что то пошло не так."));
                 } catch (TelegramApiException e) {
                     log.error("Error yopta: " + e.getMessage());
                 }
             }
         } catch (Exception e) {
             try {
-                execute(new SendMessage(String.valueOf(chatId), "Что то пошло не так."));
+                execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались. Используйте команду /start"));
             } catch (TelegramApiException e2) {
                 log.error("Error yopta: " + e2.getMessage());
             }
