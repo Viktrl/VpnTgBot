@@ -1,0 +1,68 @@
+private static final String DATA_FILE = "traffic_data.json"; // Файл для сохранения данных
+
+private static void savePreviousData() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            objectMapper.writeValue(new File(DATA_FILE), previousData);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+private static void loadPreviousData() {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            File file = new File(DATA_FILE);
+            if (file.exists()) {
+                previousData = objectMapper.readValue(file, new TypeReference<Map<String, Long>>() {
+                });
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+private static void scheduleDailyTask(int targetHour, int targetMinute) {
+        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+
+        Runnable task = () -> {
+            System.out.println("Запуск задачи: " + LocalDateTime.now());
+//            checkAndNotify(); // Твой метод
+        };
+
+        long initialDelay = calculateInitialDelay(targetHour, targetMinute);
+        long period = 24 * 60 * 60; // 24 часа в секундах
+
+        scheduler.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
+    }
+
+private static long calculateInitialDelay(int targetHour, int targetMinute) {
+        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Europe/Moscow"));
+        ZonedDateTime nextRun = now.withHour(targetHour).withMinute(targetMinute).withSecond(0);
+
+        if (now.compareTo(nextRun) > 0) { // Если текущее время уже после 10:00, берем завтра
+            nextRun = nextRun.plusDays(1);
+        }
+
+        return Duration.between(now, nextRun).getSeconds();
+    }
+
+private void checkAndNotify() {
+        try {
+            Map<String, Long> currentData = fetchTrafficData();
+
+            if (!previousData.isEmpty()) {
+                for (String userId : currentData.keySet()) {
+                    long previous = previousData.getOrDefault(userId, 0L);
+                    long current = currentData.get(userId);
+                    long delta = current - previous;
+
+                    double deltaInGb = delta / 1_073_741_824.0;
+                    startCommand(245344798, String.format("Ваше потребление трафика за сутки: %.2f GB", deltaInGb));
+                }
+            }
+            previousData = currentData;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
