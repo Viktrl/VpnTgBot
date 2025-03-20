@@ -32,6 +32,7 @@ import java.io.*;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
+import java.security.URIParameter;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.sql.Timestamp;
@@ -56,6 +57,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     OutlineWrapper outlineWrapper = OutlineWrapper.create("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA");
     private static Map<String, Long> previousData = new HashMap<>(); // Храним прошлые данные
     private static final String DATA_FILE = "traffic_data.json"; // Файл для сохранения данных
+    private Update currentUpdate;
 
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
@@ -70,7 +72,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(14,40);
+            scheduleDailyTask(20, 44);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
         }
@@ -84,6 +86,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
+        this.currentUpdate = update;
         if (update.hasMessage() && update.getMessage().hasText()) {
             String message = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
@@ -296,28 +299,48 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     public void sendUserMessageAboutTrafficUsed() throws IOException {
-        var chatId = message.getChatId();
-//        var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
-        var savedUserFromDb = userRepository.findById();
-        savedUserFromDb.getChatId();
+        List<String> listOfChatIds = new ArrayList<>();
+        userRepository.findAll().forEach(user -> {
+                    listOfChatIds.add(String.valueOf(user.getChatId()));
+                }
+        );
+
+        List<String> listOfTokens = new ArrayList<>();
+        userRepository.findAll().forEach(user -> {
+                    listOfTokens.add(String.valueOf(user.getToken()));
+                }
+        );
+        listOfTokens.retainAll(fetchTrafficData().keySet());
 
         Map<String, Long> currentData = fetchTrafficData();
 
         try {
-            loadPreviousData();
-            long previous = previousData.getOrDefault("56", 0L);
-            long current = currentData.get("56");
-            long delta = current - previous;
+//            loadPreviousData();
 
-            double deltaInGb = delta / 1_073_741_824.0;
+            for (String listOfToken : listOfTokens) {
+//                long previous = previousData.getOrDefault(listOfChatIds.get(i), 0L);
+//                long current = currentData.get(listOfChatIds.get(i));
+//                long delta = current - previous;
+//
+//                double deltaInGb = delta / 1_073_741_824.0;
 
-            if (deltaInGb > 5.0) {
-                startCommand(245344798, String.format("Ваше потребление трафика за сутки: %.2f GB", deltaInGb));
-            } else {
-                System.out.println("sout = 5 gb nety");
+//                if (deltaInGb > 5.0) {
+//                    startCommand(Long.parseLong(listOfChatIds.get(i)), String.format("Ваше потребление трафика за сутки: %.2f GB", deltaInGb));
+//                } else {
+//                    System.out.println("sout = 5 gb nety");
+//                }
+//                Map<String, Long> filteredFetchTrafficData = fetchTrafficData()
+//                        .entrySet()
+//                        .stream()
+//                        .filter(entry -> listOfTokens.contains(entry.getKey()))
+//                        .collect(HashMap::new, (m, v) -> m.put(v.getKey(), v.getValue()), HashMap::putAll);
+                Long trafficByUser = fetchTrafficData().get(listOfToken);
+                Double trafficByUserInGb = trafficByUser / 1_073_741_824.0;
+                startCommand(245344798L, "Использовано трафика: " + String.format("%.2f GB", trafficByUserInGb));
+                //Long.parseLong(listOfChatIds.get(i))
             }
 
-            previousData = currentData;
+//            previousData = currentData;
 //            savePreviousData();
         } catch (Exception e) {
             e.printStackTrace();
