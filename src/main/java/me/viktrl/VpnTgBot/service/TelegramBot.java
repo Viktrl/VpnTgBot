@@ -297,7 +297,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     public void sendUserMessageAboutTrafficUsed() throws IOException {
         var chatId = message.getChatId();
-        var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
+//        var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
+        var savedUserFromDb = userRepository.findById();
+        savedUserFromDb.getChatId();
+
         Map<String, Long> currentData = fetchTrafficData();
 
         try {
