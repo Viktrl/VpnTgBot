@@ -211,7 +211,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                         String showUserAnswer = "Логин: " + user.getUsername() + "\n" +
                                 "ID: " + user.getToken() + "\n" +
                                 "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                                "Использовано трафика: " + trafficByUser + " GB";
+                                "Использовано трафика: " + String.valueOf(trafficByUser) + " GB";
                         execute(new SendMessage(String.valueOf(chatId), showUserAnswer));
                     }
                 } catch (TelegramApiException e) {
