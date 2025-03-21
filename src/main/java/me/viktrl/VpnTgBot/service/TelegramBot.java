@@ -69,7 +69,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(12, 30);
+            scheduleDailyTask(11, 11);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
         }
