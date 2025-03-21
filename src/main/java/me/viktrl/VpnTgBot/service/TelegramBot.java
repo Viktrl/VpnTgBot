@@ -70,7 +70,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(14, 28);
+            scheduleDailyTask(15, 16);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
         }
@@ -197,22 +197,15 @@ public class TelegramBot extends TelegramLongPollingBot {
                     if (message.getChat().getUserName().equals("unmaskked")) {
                         Map<String, Double> answerForMe = new LinkedHashMap<>();
 
-                        fetchTrafficData().entrySet()
-                                .stream()
-                                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                                .forEachOrdered(e -> answerForMe.put(e.getKey(), Double.valueOf(e.getValue())));
-
-                        for (Map.Entry<String, Long> entry : fetchTrafficData().entrySet()) {
-                            String userId = entry.getKey();
-                            double trafficInGb = entry.getValue() / 1_073_741_824.0; // Конвертация в ГБ
-                            answerForMe.put(userId, Math.round(trafficInGb * 100) / 100.0);
-                        }
+                        userRepository.findAll().forEach(el -> {
+                            answerForMe.put(el.getUsername(), el.getTrafficUsed());
+                        });
 
                         String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create().toJson(answerForMe);
                         String showAdminAnswer = "Логин: " + user.getUsername() + "\n" +
                                 "ID: " + user.getToken() + "\n" +
                                 "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                                "Использовано трафика:\n" + prettyJsonAnswerForMe;
+                                "Использовано трафика:\n" + prettyJsonAnswerForMe + " GB";
                         execute(new SendMessage(String.valueOf(chatId), showAdminAnswer));
                     } else {
                         Long trafficByUser = fetchTrafficData().get(user.getToken());
@@ -269,37 +262,37 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     public void sendUserMessageAboutTrafficUsed() throws IOException {
         try {
-            for (String activeToken : listOfActiveUsers().keySet()) {
-                Long trafficByUser = fetchTrafficData().get(activeToken);
-                Double trafficByUserInGb = trafficByUser / 1_073_741_824.0;
-//                startCommand(listOfActiveUsers().get(activeToken), "Использовано трафика: " + String.format("%.2f GB", trafficByUserInGb));
-                System.out.println("sout = " + "Использовано трафика by " + activeToken + ": " + String.format("%.2f GB", trafficByUserInGb));
-            }
+            Map<String, Double> list = new LinkedHashMap<>();
+
+
+            userRepository.findAll().forEach(el -> {
+                if (el.getTrafficUsed() != null) {
+                    list.put(el.getUsername(), el.getTrafficUsed());
+                }
+            });
+            System.out.println("sout = " + list.toString());
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public Map<String, Long> listOfActiveUsers() {
-        Map<String, Long> listOfActiveUsers = new HashMap<>();
-
-        userRepository.findAll().forEach(el -> {
-            try {
-                if (fetchTrafficData().containsKey(el.getToken())) {
-                    listOfActiveUsers.put(el.getToken(), el.getChatId());
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        return listOfActiveUsers;
-    }
-
     private void saveInDatabaseTrafficUsedByUser() {
         try {
-            for (String activeToken : listOfActiveUsers().keySet()) {
-                User user = userRepository.findById(listOfActiveUsers().get(activeToken)).get();
+            Map<String, Long> listOfActiveUsers = new HashMap<>();
+
+            userRepository.findAll().forEach(el -> {
+                try {
+                    if (fetchTrafficData().containsKey(el.getToken())) {
+                        listOfActiveUsers.put(el.getToken(), el.getChatId());
+                    }
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            });
+
+            for (String activeToken : listOfActiveUsers.keySet()) {
+                User user = userRepository.findById(listOfActiveUsers.get(activeToken)).get();
                 Map<String, Double> fetchTrafficDataInGb = new LinkedHashMap<>();
 
                 fetchTrafficData().entrySet()
