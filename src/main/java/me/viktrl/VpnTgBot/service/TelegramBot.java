@@ -25,6 +25,8 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import javax.net.ssl.*;
@@ -119,11 +121,47 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void startCommand(long chatId, String name) {
+    private void sendMessage(Long chatId, String textToSend) {
+        SendMessage message = new SendMessage();
+        message.setChatId(chatId);
+        message.setText(textToSend);
+
+        ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+        replyKeyboardMarkup.setResizeKeyboard(true);
+        List<KeyboardRow> keyboardRows = new ArrayList<>();
+        KeyboardRow row = new KeyboardRow();
+        row.add("/start");
+
+        keyboardRows.add(row);
+
+        row = new KeyboardRow();
+        row.add("/registerkey");
+        row.add("/myaccount");
+
+        keyboardRows.add(row);
+
+        row = new KeyboardRow();
+        row.add("/mykey");
+        row.add("/help");
+
+        keyboardRows.add(row);
+
+        replyKeyboardMarkup.setKeyboard(keyboardRows);
+
+        message.setReplyMarkup(replyKeyboardMarkup);
+
         try {
-            execute(new SendMessage(String.valueOf(chatId), name));
+            execute(message);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
+        }
+    }
+
+    private void startCommand(Long chatId, String name) {
+        try {
+            sendMessage(chatId, name);
+        } catch (Exception e) {
+            System.out.println("Error yopta: " + e.getMessage());
         }
     }
 
