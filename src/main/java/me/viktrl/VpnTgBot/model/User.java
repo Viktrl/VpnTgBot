@@ -26,6 +26,8 @@ public class User {
 
     private String tokenKey;
 
+    private Double trafficUsed;
+
     public Long getChatId() {
         return chatId;
     }
@@ -50,8 +52,12 @@ public class User {
         return token;
     }
 
-    public void setTokenKey(String tokenKey) {
-        this.tokenKey = tokenKey;
+    public String getTokenKey() {
+        return tokenKey;
+    }
+
+    public Double getTrafficUsed() {
+        return trafficUsed;
     }
 
     public void setChatId(Long chatId) {
@@ -78,8 +84,12 @@ public class User {
         this.token = token;
     }
 
-    public String getTokenKey() {
-        return tokenKey;
+    public void setTokenKey(String tokenKey) {
+        this.tokenKey = tokenKey;
+    }
+
+    public void setTrafficUsed(Double trafficUsed) {
+        this.trafficUsed = trafficUsed;
     }
 
     @Override
@@ -92,6 +102,7 @@ public class User {
                 ", registeredAt=" + registeredAt +
                 ", token='" + token + '\'' +
                 ", tokenKey='" + tokenKey + '\'' +
+                ", trafficUsed=" + trafficUsed +
                 '}';
     }
 }

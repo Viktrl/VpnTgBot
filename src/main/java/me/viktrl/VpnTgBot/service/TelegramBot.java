@@ -55,9 +55,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     private UserRepository userRepository;
     final BotConfig config;
     OutlineWrapper outlineWrapper = OutlineWrapper.create("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA");
-    private static Map<String, Long> previousData = new HashMap<>(); // Храним прошлые данные
     private static final String DATA_FILE = "traffic_data.json"; // Файл для сохранения данных
-    private Update currentUpdate;
 
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
@@ -72,7 +70,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(9, 0);
+            scheduleDailyTask(14, 28);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
         }
@@ -86,7 +84,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
-        this.currentUpdate = update;
         if (update.hasMessage() && update.getMessage().hasText()) {
             String message = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
@@ -117,9 +114,6 @@ public class TelegramBot extends TelegramLongPollingBot {
                             "3. Откройте клиент Outline. Если ваш ключ доступа определился автоматически, нажмите \"Подключиться\". Если этого не произошло, вставьте ключ в поле и нажмите \"Подключиться\".\n\n" +
                             "Теперь у вас есть доступ к свободному интернету. Чтобы убедиться, что вы подключились к серверу, зайдите на 2ip.ru, и проверьте IP.");
                     break;
-//                case "/sendusermessage":
-//                    sendUserMessageAboutTrafficUsed(update.getMessage());
-//                    break;
                 default:
                     startCommand(chatId, "Этой команды не существует");
             }
@@ -139,8 +133,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         var chatId = message.getChatId();
 
         if (userRepository.findById(message.getFrom().getId()).isEmpty()) {
-            var chat = message.getChat();
-
             user.setChatId(chatId);
             user.setFirstName(message.getFrom().getFirstName());
             user.setLastName(message.getFrom().getLastName());
@@ -163,17 +155,16 @@ public class TelegramBot extends TelegramLongPollingBot {
         var chatId = message.getChatId();
 
         try {
-            var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
+            User user = userRepository.findById(message.getFrom().getId()).get();
 
-            if (savedUserFromDb.getToken() == null) {
+            if (user.getToken() == null) {
                 int newKeyId = outlineWrapper.generateKey().id;
 
-                savedUserFromDb.setToken(String.valueOf(outlineWrapper.getKey(newKeyId).id));
-                savedUserFromDb.setTokenKey(outlineWrapper.getKey(newKeyId).accessUrl);
-                userRepository.save(savedUserFromDb);
-//                log.info("User created VPN: " + user);
+                user.setToken(String.valueOf(outlineWrapper.getKey(newKeyId).id));
+                user.setTokenKey(outlineWrapper.getKey(newKeyId).accessUrl);
+                userRepository.save(user);
 
-                String AnswerVpnSuccessCreated = "Бесплатный ВПН создан. Ключ:\n" + savedUserFromDb.getTokenKey() + "\n\nИспользуйте команду /help чтобы получить инструкцию к легкой установке и настройке ВПН";
+                String AnswerVpnSuccessCreated = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey() + "\n\nИспользуйте команду /help чтобы получить инструкцию к легкой установке и настройке ВПН";
                 try {
                     execute(new SendMessage(String.valueOf(chatId), AnswerVpnSuccessCreated));
                 } catch (TelegramApiException e) {
@@ -200,36 +191,35 @@ public class TelegramBot extends TelegramLongPollingBot {
         var chatId = message.getChatId();
 
         try {
-            var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
+            User user = userRepository.findById(message.getFrom().getId()).get();
             if (!userRepository.findById(message.getFrom().getId()).isEmpty()) {
                 try {
                     if (message.getChat().getUserName().equals("unmaskked")) {
-                        Map<String, Long> rawFetchTrafficData = fetchTrafficData();
-                        Map<String, Double> fetchTrafficDataInGb = new LinkedHashMap<>();
+                        Map<String, Double> answerForMe = new LinkedHashMap<>();
 
-                        rawFetchTrafficData.entrySet()
+                        fetchTrafficData().entrySet()
                                 .stream()
                                 .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                                .forEachOrdered(e -> fetchTrafficDataInGb.put(e.getKey(), Double.valueOf(e.getValue())));
+                                .forEachOrdered(e -> answerForMe.put(e.getKey(), Double.valueOf(e.getValue())));
 
-                        for (Map.Entry<String, Long> entry : rawFetchTrafficData.entrySet()) {
+                        for (Map.Entry<String, Long> entry : fetchTrafficData().entrySet()) {
                             String userId = entry.getKey();
                             double trafficInGb = entry.getValue() / 1_073_741_824.0; // Конвертация в ГБ
-                            fetchTrafficDataInGb.put(userId, Math.round(trafficInGb * 100) / 100.0);
+                            answerForMe.put(userId, Math.round(trafficInGb * 100) / 100.0);
                         }
 
-                        String prettyJson = new GsonBuilder().setPrettyPrinting().create().toJson(fetchTrafficDataInGb);
-                        String showAdminAnswer = "Логин: " + savedUserFromDb.getUsername() + "\n" +
-                                "ID: " + savedUserFromDb.getToken() + "\n" +
-                                "Ключ для ВПН: " + savedUserFromDb.getTokenKey() + "\n" +
-                                "Использовано трафика:\n" + prettyJson;
+                        String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create().toJson(answerForMe);
+                        String showAdminAnswer = "Логин: " + user.getUsername() + "\n" +
+                                "ID: " + user.getToken() + "\n" +
+                                "Ключ для ВПН: " + user.getTokenKey() + "\n" +
+                                "Использовано трафика:\n" + prettyJsonAnswerForMe;
                         execute(new SendMessage(String.valueOf(chatId), showAdminAnswer));
                     } else {
-                        Long trafficByUser = fetchTrafficData().get(savedUserFromDb.getToken());
+                        Long trafficByUser = fetchTrafficData().get(user.getToken());
                         Double trafficByUserInGb = trafficByUser / 1_073_741_824.0;
-                        String showUserAnswer = "Логин: " + savedUserFromDb.getUsername() + "\n" +
-                                "ID: " + savedUserFromDb.getToken() + "\n" +
-                                "Ключ для ВПН: " + savedUserFromDb.getTokenKey() + "\n" +
+                        String showUserAnswer = "Логин: " + user.getUsername() + "\n" +
+                                "ID: " + user.getToken() + "\n" +
+                                "Ключ для ВПН: " + user.getTokenKey() + "\n" +
                                 "Использовано трафика: " + String.format("%.2f GB", trafficByUserInGb);
                         execute(new SendMessage(String.valueOf(chatId), showUserAnswer));
                     }
@@ -256,8 +246,8 @@ public class TelegramBot extends TelegramLongPollingBot {
         var chatId = message.getChatId();
 
         try {
-            var savedUserFromDb = userRepository.findById(message.getFrom().getId()).get();
-            String showUserKeyAnswer = savedUserFromDb.getTokenKey();
+            User user = userRepository.findById(message.getFrom().getId()).get();
+            String showUserKeyAnswer = user.getTokenKey();
 
             if (!userRepository.findById(message.getFrom().getId()).isEmpty()) {
                 startCommand(chatId, showUserKeyAnswer);
@@ -274,6 +264,60 @@ public class TelegramBot extends TelegramLongPollingBot {
             } catch (TelegramApiException e2) {
                 log.error("Error yopta: " + e2.getMessage());
             }
+        }
+    }
+
+    public void sendUserMessageAboutTrafficUsed() throws IOException {
+        try {
+            for (String activeToken : listOfActiveUsers().keySet()) {
+                Long trafficByUser = fetchTrafficData().get(activeToken);
+                Double trafficByUserInGb = trafficByUser / 1_073_741_824.0;
+//                startCommand(listOfActiveUsers().get(activeToken), "Использовано трафика: " + String.format("%.2f GB", trafficByUserInGb));
+                System.out.println("sout = " + "Использовано трафика by " + activeToken + ": " + String.format("%.2f GB", trafficByUserInGb));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Map<String, Long> listOfActiveUsers() {
+        Map<String, Long> listOfActiveUsers = new HashMap<>();
+
+        userRepository.findAll().forEach(el -> {
+            try {
+                if (fetchTrafficData().containsKey(el.getToken())) {
+                    listOfActiveUsers.put(el.getToken(), el.getChatId());
+                }
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        return listOfActiveUsers;
+    }
+
+    private void saveInDatabaseTrafficUsedByUser() {
+        try {
+            for (String activeToken : listOfActiveUsers().keySet()) {
+                User user = userRepository.findById(listOfActiveUsers().get(activeToken)).get();
+                Map<String, Double> fetchTrafficDataInGb = new LinkedHashMap<>();
+
+                fetchTrafficData().entrySet()
+                        .stream()
+                        .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                        .forEachOrdered(e -> fetchTrafficDataInGb.put(e.getKey(), Double.valueOf(e.getValue())));
+
+                for (Map.Entry<String, Long> entry : fetchTrafficData().entrySet()) {
+                    String userId = entry.getKey();
+                    double trafficInGb = entry.getValue() / 1_073_741_824.0; // Конвертация в ГБ
+                    fetchTrafficDataInGb.put(userId, Math.round(trafficInGb * 100) / 100.0);
+                }
+
+                user.setTrafficUsed(fetchTrafficDataInGb.get(activeToken));
+                userRepository.save(user);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
@@ -299,53 +343,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         return trafficData;
     }
 
-    public void sendUserMessageAboutTrafficUsed() throws IOException {
-        Map<String, Long> listOfActiveUsers = new HashMap<>();
-
-        userRepository.findAll().forEach(el -> {
-            try {
-                if (fetchTrafficData().containsKey(el.getToken())) {
-                    listOfActiveUsers.put(el.getToken(), el.getChatId());
-                }
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        try {
-//            loadPreviousData();
-
-            for (String activeToken : listOfActiveUsers.keySet()) {
-//                long previous = previousData.getOrDefault(listOfChatIds.get(i), 0L);
-//                long current = currentData.get(listOfChatIds.get(i));
-//                long delta = current - previous;
-//
-//                double deltaInGb = delta / 1_073_741_824.0;
-
-//                if (deltaInGb > 5.0) {
-//                    startCommand(Long.parseLong(listOfChatIds.get(i)), String.format("Ваше потребление трафика за сутки: %.2f GB", deltaInGb));
-//                } else {
-//                    System.out.println("sout = 5 gb nety");
-//                }
-//                Map<String, Long> filteredFetchTrafficData = fetchTrafficData()
-//                        .entrySet()
-//                        .stream()
-//                        .filter(entry -> listOfTokens.contains(entry.getKey()))
-//                        .collect(HashMap::new, (m, v) -> m.put(v.getKey(), v.getValue()), HashMap::putAll);
-
-                Long trafficByUser = fetchTrafficData().get(activeToken);
-                Double trafficByUserInGb = trafficByUser / 1_073_741_824.0;
-                startCommand(listOfActiveUsers.get(activeToken), "Использовано трафика: " + String.format("%.2f GB", trafficByUserInGb));
-                //Long.parseLong(listOfChatIds.get(i))
-            }
-
-//            previousData = currentData;
-//            savePreviousData();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
     private void scheduleDailyTask(int targetHour, int targetMinute) {
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
@@ -353,6 +350,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             System.out.println("Запуск задачи: " + LocalDateTime.now());
             try {
                 sendUserMessageAboutTrafficUsed();
+                saveInDatabaseTrafficUsedByUser();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -373,28 +371,6 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
 
         return Duration.between(now, nextRun).getSeconds();
-    }
-
-    private static void savePreviousData() {
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            objectMapper.writeValue(new File(DATA_FILE), previousData);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static void loadPreviousData() {
-        try {
-            ObjectMapper objectMapper = new ObjectMapper();
-            File file = new File(DATA_FILE);
-            if (file.exists()) {
-                previousData = objectMapper.readValue(file, new TypeReference<Map<String, Long>>() {
-                });
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     private void removeSSLVerifier(@NonNull HttpsURLConnection connection) {
