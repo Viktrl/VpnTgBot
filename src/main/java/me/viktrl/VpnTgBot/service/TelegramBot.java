@@ -55,7 +55,6 @@ public class TelegramBot extends TelegramLongPollingBot {
     private UserRepository userRepository;
     final BotConfig config;
     OutlineWrapper outlineWrapper = OutlineWrapper.create("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA");
-    private static final String DATA_FILE = "traffic_data.json"; // Файл для сохранения данных
 
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
