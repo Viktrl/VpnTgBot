@@ -68,7 +68,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         listCommand.add(new BotCommand("/help", "Инструкция"));
 
         try {
-            this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
+            this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "ru"));
             scheduleDailyTask(11, 11);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
@@ -204,15 +204,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                         String showAdminAnswer = "Логин: " + user.getUsername() + "\n" +
                                 "ID: " + user.getToken() + "\n" +
                                 "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                                "Использовано трафика:\n" + prettyJsonAnswerForMe + " GB";
+                                "Использовано трафика:\n" + prettyJsonAnswerForMe;
                         execute(new SendMessage(String.valueOf(chatId), showAdminAnswer));
                     } else {
-                        Long trafficByUser = fetchTrafficData().get(user.getToken());
-                        Double trafficByUserInGb = trafficByUser / 1_073_741_824.0;
+                        Double trafficByUser = user.getTrafficUsed();
                         String showUserAnswer = "Логин: " + user.getUsername() + "\n" +
                                 "ID: " + user.getToken() + "\n" +
                                 "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                                "Использовано трафика: " + String.format("%.2f GB", trafficByUserInGb);
+                                "Использовано трафика: " + trafficByUser + " GB";
                         execute(new SendMessage(String.valueOf(chatId), showUserAnswer));
                     }
                 } catch (TelegramApiException e) {
