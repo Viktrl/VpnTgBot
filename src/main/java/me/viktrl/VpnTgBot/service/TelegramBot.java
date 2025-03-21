@@ -70,7 +70,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(15, 16);
+            scheduleDailyTask(15, 27);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
         }
@@ -262,15 +262,17 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     public void sendUserMessageAboutTrafficUsed() throws IOException {
         try {
-            Map<String, Double> list = new LinkedHashMap<>();
-
+            Map<Long, Double> list = new LinkedHashMap<>();
 
             userRepository.findAll().forEach(el -> {
                 if (el.getTrafficUsed() != null) {
-                    list.put(el.getUsername(), el.getTrafficUsed());
+                    list.put(el.getChatId(), el.getTrafficUsed());
                 }
             });
-            System.out.println("sout = " + list.toString());
+
+            for (Long chatId : list.keySet()) {
+                startCommand(chatId, "Использовано трафика: " + list.get(chatId) + " GB");
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
