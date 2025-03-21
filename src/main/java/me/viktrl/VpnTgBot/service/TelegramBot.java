@@ -238,14 +238,14 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
             } else {
                 try {
-                    execute(new SendMessage(String.valueOf(chatId), "Что то пошло не так."));
+                    execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались. Используйте команду /start"));
                 } catch (TelegramApiException e) {
                     log.error("Error yopta: " + e.getMessage());
                 }
             }
         } catch (Exception e) {
             try {
-                execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались. Используйте команду /start"));
+                execute(new SendMessage(String.valueOf(chatId), "Что то пошло не так."));
             } catch (TelegramApiException e2) {
                 log.error("Error yopta: " + e2.getMessage());
             }
