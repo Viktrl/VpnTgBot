@@ -63,15 +63,15 @@ public class TelegramBot extends TelegramLongPollingBot {
         this.config = config;
 
         List<BotCommand> listCommand = new ArrayList<>();
-        listCommand.add(new BotCommand("/start", "Войти"));
-        listCommand.add(new BotCommand("/registerkey", "Создать ВПН"));
-        listCommand.add(new BotCommand("/myaccount", "Мои данные"));
-        listCommand.add(new BotCommand("/mykey", "Мой ключ доступа"));
+//        listCommand.add(new BotCommand("/start", "Войти"));
+        listCommand.add(new BotCommand("Зарегистрировать ключ", "Создать ВПН"));
+        listCommand.add(new BotCommand("Мои данные", "Мои данные"));
+        listCommand.add(new BotCommand("Мой ключ", "Мой ключ доступа"));
         listCommand.add(new BotCommand("/help", "Инструкция"));
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "ru"));
-            scheduleDailyTask(11, 11);
+            scheduleDailyTask(13, 50);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
         }
@@ -94,17 +94,17 @@ public class TelegramBot extends TelegramLongPollingBot {
                     startCommand(chatId, "Привет, " + update.getMessage().getChat().getFirstName());
                     registerUser(update.getMessage());
                     break;
-                case "/registerkey":
+                case "Зарегистрировать ключ":
                     registerKey(update.getMessage());
                     break;
-                case "/myaccount":
+                case "Мои данные":
                     showUserAccount(update.getMessage());
                     break;
-                case "/mykey":
+                case "Мой ключ":
                     showUserKey(update.getMessage());
                     break;
                 case "/help":
-                    startCommand(chatId, "1. Скопируйте ключ доступа /mykey\n\n" +
+                    startCommand(chatId, "1. Скопируйте ключ доступа (используйте команду \"Мой ключ\")\n\n" +
                             "2. Скачайте и установите подходящее вашему устройству приложение Outline: \n" +
                             "iOS: https://itunes.apple.com/app/outline-app/id1356177741\n" +
                             "Android: https://play.google.com/store/apps/details?id=org.outline.android.client\n" +
@@ -130,18 +130,18 @@ public class TelegramBot extends TelegramLongPollingBot {
         replyKeyboardMarkup.setResizeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
         KeyboardRow row = new KeyboardRow();
-        row.add("/start");
+//        row.add("/start");
+//
+//        keyboardRows.add(row);
+
+        row = new KeyboardRow();
+        row.add("Зарегистрировать ключ");
+        row.add("Мои данные");
 
         keyboardRows.add(row);
 
         row = new KeyboardRow();
-        row.add("/registerkey");
-        row.add("/myaccount");
-
-        keyboardRows.add(row);
-
-        row = new KeyboardRow();
-        row.add("/mykey");
+        row.add("Мой ключ");
         row.add("/help");
 
         keyboardRows.add(row);
@@ -179,7 +179,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             userRepository.save(user);
             log.info("User registered: " + user);
 
-            String AnswerUserSuccessCreated = "Добрый день! Вы успешно зарегистрировались.\nВаш логин в системе: " + user.getUsername() + "\n\nСоздайте токен используя команду /registerkey";
+            String AnswerUserSuccessCreated = "Добрый день! Вы успешно зарегистрировались.\nВаш логин в системе: " + user.getUsername() + "\n\nСоздайте токен используя команду \"Зарегистрировать ключ\"";
             try {
                 execute(new SendMessage(String.valueOf(chatId), AnswerUserSuccessCreated));
             } catch (TelegramApiException e) {
