@@ -67,7 +67,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         listCommand.add(new BotCommand("Зарегистрировать ключ", "Создать ВПН"));
         listCommand.add(new BotCommand("Мои данные", "Мои данные"));
         listCommand.add(new BotCommand("Мой ключ", "Мой ключ доступа"));
-        listCommand.add(new BotCommand("/help", "Инструкция"));
+        listCommand.add(new BotCommand("Инструкция", "Инструкция"));
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "ru"));
@@ -103,7 +103,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "Мой ключ":
                     showUserKey(update.getMessage());
                     break;
-                case "/help":
+                case "Инструкция":
                     startCommand(chatId, "1. Скопируйте ключ доступа (используйте команду \"Мой ключ\")\n\n" +
                             "2. Скачайте и установите подходящее вашему устройству приложение Outline: \n" +
                             "iOS: https://itunes.apple.com/app/outline-app/id1356177741\n" +
@@ -142,7 +142,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         row = new KeyboardRow();
         row.add("Мой ключ");
-        row.add("/help");
+        row.add("Инструкция");
 
         keyboardRows.add(row);
 
