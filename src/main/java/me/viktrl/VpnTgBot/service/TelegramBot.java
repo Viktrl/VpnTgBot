@@ -62,15 +62,15 @@ public class TelegramBot extends TelegramLongPollingBot {
         super(config.getBotToken());
         this.config = config;
 
-//        List<BotCommand> listCommand = new ArrayList<>();
-//        listCommand.add(new BotCommand("/start", "Войти"));
+        List<BotCommand> listCommand = new ArrayList<>();
+        listCommand.add(new BotCommand("/start", "Начать"));
 //        listCommand.add(new BotCommand("Зарегистрировать ключ", "Создать ВПН"));
 //        listCommand.add(new BotCommand("Мои данные", "Мои данные"));
 //        listCommand.add(new BotCommand("Мой ключ", "Мой ключ доступа"));
 //        listCommand.add(new BotCommand("Инструкция", "Инструкция"));
 
         try {
-//            this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "ru"));
+            this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
             scheduleDailyTask(17, 0);
         } catch (Exception e) {
             log.error("Error yopta: " + e.getMessage());
@@ -123,28 +123,32 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void sendMessage(Long chatId, String textToSend) {
         SendMessage message = new SendMessage();
+
+        User user = userRepository.findById(chatId).get();
+
         message.setChatId(chatId);
         message.setText(textToSend);
 
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         replyKeyboardMarkup.setResizeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
+
         KeyboardRow row = new KeyboardRow();
-        row.add("/start");
+        if (user.getToken() == null) {
+            row.add("Зарегистрировать ключ");
+        }
+        if (user.getToken() != null) {
+            row.add("Мои данные");
+        }
 
         keyboardRows.add(row);
 
         row = new KeyboardRow();
-        row.add("Зарегистрировать ключ");
-        row.add("Мои данные");
-
-        keyboardRows.add(row);
-
-        row = new KeyboardRow();
-        row.add("Мой ключ");
-        row.add("Инструкция");
-
-        keyboardRows.add(row);
+        if (user.getToken() != null) {
+            row.add("Мой ключ");
+            row.add("Инструкция");
+            keyboardRows.add(row);
+        }
 
         replyKeyboardMarkup.setKeyboard(keyboardRows);
 
