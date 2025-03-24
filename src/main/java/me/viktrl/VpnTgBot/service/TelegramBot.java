@@ -62,17 +62,17 @@ public class TelegramBot extends TelegramLongPollingBot {
         super(config.getBotToken());
         this.config = config;
 
-        List<BotCommand> listCommand = new ArrayList<>();
+//        List<BotCommand> listCommand = new ArrayList<>();
 //        listCommand.add(new BotCommand("/start", "Войти"));
-        listCommand.add(new BotCommand("Зарегистрировать ключ", "Создать ВПН"));
-        listCommand.add(new BotCommand("Мои данные", "Мои данные"));
-        listCommand.add(new BotCommand("Мой ключ", "Мой ключ доступа"));
-        listCommand.add(new BotCommand("Инструкция", "Инструкция"));
+//        listCommand.add(new BotCommand("Зарегистрировать ключ", "Создать ВПН"));
+//        listCommand.add(new BotCommand("Мои данные", "Мои данные"));
+//        listCommand.add(new BotCommand("Мой ключ", "Мой ключ доступа"));
+//        listCommand.add(new BotCommand("Инструкция", "Инструкция"));
 
         try {
-            this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "ru"));
-            scheduleDailyTask(13, 50);
-        } catch (TelegramApiException e) {
+//            this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "ru"));
+            scheduleDailyTask(17, 0);
+        } catch (Exception e) {
             log.error("Error yopta: " + e.getMessage());
         }
     }
@@ -130,9 +130,9 @@ public class TelegramBot extends TelegramLongPollingBot {
         replyKeyboardMarkup.setResizeKeyboard(true);
         List<KeyboardRow> keyboardRows = new ArrayList<>();
         KeyboardRow row = new KeyboardRow();
-//        row.add("/start");
-//
-//        keyboardRows.add(row);
+        row.add("/start");
+
+        keyboardRows.add(row);
 
         row = new KeyboardRow();
         row.add("Зарегистрировать ключ");
@@ -161,7 +161,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             sendMessage(chatId, name);
         } catch (Exception e) {
-            System.out.println("Error yopta: " + e.getMessage());
+            System.out.println("3Error yopta: " + e.getMessage());
         }
     }
 
@@ -278,20 +278,20 @@ public class TelegramBot extends TelegramLongPollingBot {
             User user = userRepository.findById(message.getFrom().getId()).get();
             String showUserKeyAnswer = user.getTokenKey();
 
-            if (!userRepository.findById(message.getFrom().getId()).isEmpty()) {
+            if (showUserKeyAnswer != null) {
                 startCommand(chatId, showUserKeyAnswer);
             } else {
                 try {
                     execute(new SendMessage(String.valueOf(chatId), "Что то пошло не так."));
                 } catch (TelegramApiException e) {
-                    log.error("Error yopta: " + e.getMessage());
+                    log.error("1Error yopta: " + e.getMessage());
                 }
             }
         } catch (Exception e) {
             try {
                 execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались. Используйте команду /start"));
             } catch (TelegramApiException e2) {
-                log.error("Error yopta: " + e2.getMessage());
+                log.error("2Error yopta: " + e2.getMessage());
             }
         }
     }
