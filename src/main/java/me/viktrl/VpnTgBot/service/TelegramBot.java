@@ -1,21 +1,15 @@
 package me.viktrl.VpnTgBot.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.dynomake.outline.OutlineWrapper;
-import me.dynomake.outline.gson.GsonUtil;
-import me.dynomake.outline.implementation.model.Response;
-import me.dynomake.outline.model.OutlineServer;
 import me.viktrl.VpnTgBot.config.BotConfig;
 import me.viktrl.VpnTgBot.model.User;
 import me.viktrl.VpnTgBot.model.UserRepository;
-import org.json.simple.parser.JSONParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -34,7 +28,6 @@ import java.io.*;
 import java.net.URL;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
-import java.security.URIParameter;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.sql.Timestamp;
@@ -46,9 +39,6 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
-
-import org.json.simple.JSONObject;
 
 @Slf4j
 @Component
@@ -56,11 +46,14 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     private UserRepository userRepository;
     final BotConfig config;
-    OutlineWrapper outlineWrapper = OutlineWrapper.create("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA");
+    private final OutlineWrapper outlineWrapper;
+    private final String apiUrl;
 
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
         this.config = config;
+        this.outlineWrapper = OutlineWrapper.create(config.getOutlineApiUrl());
+        apiUrl = config.getOutlineApiUrl();
 
         List<BotCommand> listCommand = new ArrayList<>();
         listCommand.add(new BotCommand("/start", "Начать"));
@@ -73,7 +66,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
             scheduleDailyTask(17, 46);
         } catch (Exception e) {
-            log.error("Error yopta: " + e.getMessage());
+            log.error("Ошибка при инициализации класса: " + e.getMessage());
         }
     }
 
@@ -104,16 +97,21 @@ public class TelegramBot extends TelegramLongPollingBot {
                     showUserKey(update.getMessage());
                     break;
                 case "Инструкция":
-                    startCommand(chatId, "1. Скопируйте ключ доступа (используйте команду \"Мой ключ\")\n\n" +
-                            "2. Скачайте и установите подходящее вашему устройству приложение Outline: \n" +
-                            "iOS: https://itunes.apple.com/app/outline-app/id1356177741\n" +
-                            "Android: https://play.google.com/store/apps/details?id=org.outline.android.client\n" +
-                            "macOS: https://itunes.apple.com/app/outline-app/id1356178125\n" +
-                            "Windows: https://s3.amazonaws.com/outline-releases/client/windows/stable/Outline-Client.exe\n" +
-                            "Linux: https://s3.amazonaws.com/outline-releases/client/linux/stable/Outline-Client.AppImage\n" +
-                            "Дополнительная ссылка для Android: https://s3.amazonaws.com/outline-releases/client/android/stable/Outline-Client.apk\n\n" +
-                            "3. Откройте клиент Outline. Если ваш ключ доступа определился автоматически, нажмите \"Подключиться\". Если этого не произошло, вставьте ключ в поле и нажмите \"Подключиться\".\n\n" +
-                            "Теперь у вас есть доступ к свободному интернету. Чтобы убедиться, что вы подключились к серверу, зайдите на 2ip.ru, и проверьте IP.");
+                    startCommand(chatId, """
+                            1. Скопируйте ключ доступа (используйте команду "Мой ключ")
+                            
+                            2. Скачайте и установите подходящее вашему устройству приложение Outline:\s
+                            iOS: https://itunes.apple.com/app/outline-app/id1356177741
+                            Android: https://play.google.com/store/apps/details?id=org.outline.android.client
+                            macOS: https://itunes.apple.com/app/outline-app/id1356178125
+                            Windows: https://s3.amazonaws.com/outline-releases/client/windows/stable/Outline-Client.exe
+                            Linux: https://s3.amazonaws.com/outline-releases/client/linux/stable/Outline-Client.AppImage
+                            Дополнительная ссылка для Android: https://s3.amazonaws.com/outline-releases/client/android/stable/Outline-Client.apk
+                            
+                            3. Откройте клиент Outline. Если ваш ключ доступа определился автоматически, нажмите "Подключиться". Если этого не произошло, вставьте ключ в поле и нажмите "Подключиться".
+                            
+                            Теперь у вас есть доступ к свободному интернету. Чтобы убедиться, что вы подключились к серверу, зайдите на 2ip.ru, и проверьте IP.
+                            """);
                     break;
                 default:
                     startCommand(chatId, "Этой команды не существует");
@@ -205,7 +203,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 user.setTokenKey(outlineWrapper.getKey(newKeyId).accessUrl);
                 userRepository.save(user);
 
-                String AnswerVpnSuccessCreated = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey() + "\n\nИспользуйте команду /help чтобы получить инструкцию к легкой установке и настройке ВПН";
+                String AnswerVpnSuccessCreated = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey() + "\n\nИспользуйте команду \"Инструкция\", чтобы получить инструкцию к легкой установке и настройке ВПН";
                 try {
                     execute(new SendMessage(String.valueOf(chatId), AnswerVpnSuccessCreated));
                 } catch (TelegramApiException e) {
@@ -220,8 +218,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
         } catch (Exception e) {
             try {
-                execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались.\n" +
-                        "Используйте команду /start"));
+                execute(new SendMessage(String.valueOf(chatId), "Ошибка"));
             } catch (TelegramApiException e2) {
                 log.error("Error yopta: " + e2.getMessage());
             }
@@ -233,14 +230,12 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             User user = userRepository.findById(message.getFrom().getId()).get();
-            if (!userRepository.findById(message.getFrom().getId()).isEmpty()) {
+            if (userRepository.findById(message.getFrom().getId()).isPresent()) {
                 try {
                     if (message.getChat().getUserName().equals("unmaskked")) {
                         Map<String, Double> answerForMe = new LinkedHashMap<>();
 
-                        userRepository.findAll().forEach(el -> {
-                            answerForMe.put(el.getUsername(), el.getTrafficUsed());
-                        });
+                        userRepository.findAll().forEach(el -> answerForMe.put(el.getUsername(), el.getTrafficUsed()));
 
                         String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create().toJson(answerForMe);
                         String showAdminAnswer = "Логин: " + user.getUsername() + "\n" +
@@ -253,7 +248,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                         String showUserAnswer = "Логин: " + user.getUsername() + "\n" +
                                 "ID: " + user.getToken() + "\n" +
                                 "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                                "Использовано трафика: " + String.valueOf(trafficByUser) + " GB";
+                                "Использовано трафика: " + trafficByUser + " GB";
                         execute(new SendMessage(String.valueOf(chatId), showUserAnswer));
                     }
                 } catch (TelegramApiException e) {
@@ -325,7 +320,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             userRepository.findAll().forEach(el -> {
                 try {
-                    if (fetchTrafficData().containsKey(el.getToken())) {
+                    if (getUsedTrafficByUser().containsKey(el.getToken())) {
                         listOfActiveUsers.put(el.getToken(), el.getChatId());
                     }
                 } catch (IOException e) {
@@ -335,20 +330,20 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             for (String activeToken : listOfActiveUsers.keySet()) {
                 User user = userRepository.findById(listOfActiveUsers.get(activeToken)).get();
-                Map<String, Double> fetchTrafficDataInGb = new LinkedHashMap<>();
+                Map<String, Double> getUsedTrafficByUserInGb = new LinkedHashMap<>();
 
-                fetchTrafficData().entrySet()
+                getUsedTrafficByUser().entrySet()
                         .stream()
                         .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                        .forEachOrdered(e -> fetchTrafficDataInGb.put(e.getKey(), Double.valueOf(e.getValue())));
+                        .forEachOrdered(e -> getUsedTrafficByUserInGb.put(e.getKey(), Double.valueOf(e.getValue())));
 
-                for (Map.Entry<String, Long> entry : fetchTrafficData().entrySet()) {
+                for (Map.Entry<String, Long> entry : getUsedTrafficByUser().entrySet()) {
                     String userId = entry.getKey();
                     double trafficInGb = entry.getValue() / 1_073_741_824.0; // Конвертация в ГБ
-                    fetchTrafficDataInGb.put(userId, Math.round(trafficInGb * 100) / 100.0);
+                    getUsedTrafficByUserInGb.put(userId, Math.round(trafficInGb * 100) / 100.0);
                 }
 
-                user.setTrafficUsed(fetchTrafficDataInGb.get(activeToken));
+                user.setTrafficUsed(getUsedTrafficByUserInGb.get(activeToken));
                 userRepository.save(user);
             }
         } catch (Exception e) {
@@ -356,10 +351,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private Map<String, Long> fetchTrafficData() throws IOException {
+    private Map<String, Long> getUsedTrafficByUser() throws IOException {
         Map<String, Long> trafficData = new LinkedHashMap<>();
 
-        HttpsURLConnection connection = (HttpsURLConnection) new URL("https://217.78.239.38:33710/lXJ6H_DXmIg9yuOCLTKKiA/metrics/transfer").openConnection();
+        HttpsURLConnection connection = (HttpsURLConnection) new URL(apiUrl).openConnection();
         connection.setRequestMethod("GET");
         removeSSLVerifier(connection);
 
@@ -379,22 +374,23 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void scheduleDailyTask(int targetHour, int targetMinute) {
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        try (ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1)) {
 
-        Runnable task = () -> {
-            System.out.println("Запуск задачи: " + LocalDateTime.now());
-            try {
-                saveInDatabaseTrafficUsedByUser();
-                sendUserMessageAboutTrafficUsed();
-            } catch (IOException e) {
-                throw new RuntimeException(e);
-            }
-        };
+            Runnable task = () -> {
+                System.out.println("Запуск задачи: " + LocalDateTime.now());
+                try {
+                    saveInDatabaseTrafficUsedByUser();
+                    sendUserMessageAboutTrafficUsed();
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            };
 
-        long initialDelay = calculateInitialDelay(targetHour, targetMinute);
-        long period = 24 * 60 * 60; // 24 часа в секундах
+            long initialDelay = calculateInitialDelay(targetHour, targetMinute);
+            long period = 24 * 60 * 60; // 24 часа в секундах
 
-        scheduler.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
+            scheduler.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
+        }
     }
 
     private long calculateInitialDelay(int targetHour, int targetMinute) {
@@ -416,13 +412,11 @@ public class TelegramBot extends TelegramLongPollingBot {
                     }
 
                     @Override
-                    public void checkClientTrusted(X509Certificate[] arg0, String arg1)
-                            throws CertificateException {
+                    public void checkClientTrusted(X509Certificate[] arg0, String arg1) {
                     }
 
                     @Override
-                    public void checkServerTrusted(X509Certificate[] arg0, String arg1)
-                            throws CertificateException {
+                    public void checkServerTrusted(X509Certificate[] arg0, String arg1) {
                     }
                 }
         };

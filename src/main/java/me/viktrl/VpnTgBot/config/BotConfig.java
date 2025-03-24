@@ -14,4 +14,7 @@ public class BotConfig {
 
     @Value( "${bot.token}")
     String botToken;
+
+    @Value("${outline.api.url}")
+    String outlineApiUrl;
 }
