@@ -71,7 +71,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(17, 0);
+            scheduleDailyTask(17, 46);
         } catch (Exception e) {
             log.error("Error yopta: " + e.getMessage());
         }
