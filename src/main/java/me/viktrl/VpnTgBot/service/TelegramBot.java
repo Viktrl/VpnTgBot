@@ -44,16 +44,16 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
-    private UserRepository userRepository;
-    final BotConfig config;
-    private final OutlineWrapper outlineWrapper;
-    private final String apiUrl;
+    UserRepository userRepository;
+    BotConfig config;
+    String apiUrl;
+    OutlineWrapper outlineWrapper;
 
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
         this.config = config;
-        this.outlineWrapper = OutlineWrapper.create(config.getOutlineApiUrl());
-        apiUrl = config.getOutlineApiUrl();
+        this.apiUrl = config.getOutlineApiUrl();
+        this.outlineWrapper = OutlineWrapper.create(apiUrl);
 
         List<BotCommand> listCommand = new ArrayList<>();
         listCommand.add(new BotCommand("/start", "Начать"));
@@ -64,7 +64,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(17, 46);
+            scheduleDailyTask(13, 13);
         } catch (Exception e) {
             log.error("Ошибка при инициализации класса: " + e.getMessage());
         }
@@ -324,7 +324,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                         listOfActiveUsers.put(el.getToken(), el.getChatId());
                     }
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    System.out.println("Ошибка в saveInDatabaseTrafficUsedByUser(): " + e.getMessage());
                 }
             });
 
@@ -335,19 +335,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                 getUsedTrafficByUser().entrySet()
                         .stream()
                         .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                        .forEachOrdered(e -> getUsedTrafficByUserInGb.put(e.getKey(), Double.valueOf(e.getValue())));
-
-                for (Map.Entry<String, Long> entry : getUsedTrafficByUser().entrySet()) {
-                    String userId = entry.getKey();
-                    double trafficInGb = entry.getValue() / 1_073_741_824.0; // Конвертация в ГБ
-                    getUsedTrafficByUserInGb.put(userId, Math.round(trafficInGb * 100) / 100.0);
-                }
+                        .forEachOrdered(e -> getUsedTrafficByUserInGb.put(e.getKey(), Math.round((e.getValue() / 1_073_741_824.0) * 100.0) / 100.0));
 
                 user.setTrafficUsed(getUsedTrafficByUserInGb.get(activeToken));
                 userRepository.save(user);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            System.out.println("Ошибка при сохранении в БД трафка пользователей: " + e.getMessage() + "\n" + e.getStackTrace());
         }
     }
 
@@ -374,7 +368,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void scheduleDailyTask(int targetHour, int targetMinute) {
-        try (ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1)) {
+        try {
+            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
             Runnable task = () -> {
                 System.out.println("Запуск задачи: " + LocalDateTime.now());
@@ -390,6 +385,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             long period = 24 * 60 * 60; // 24 часа в секундах
 
             scheduler.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            System.out.println("Ошибка при выполннии задачи по расаписанию" + e.getMessage());
         }
     }
 
