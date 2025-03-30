@@ -95,7 +95,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     registerUser(update.getMessage());
                     break;
                 case "Зарегистрировать ключ":
-                    // registerKey(update.getMessage());
+                     registerKey(update.getMessage());
                     break;
                 case "Мои данные":
                     showUserAccount(update.getMessage());
@@ -215,7 +215,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         var chatId = message.getChatId();
 
         try {
-            User user = userRepository.findById(message.getFrom().getId()).get();
+            User user = userRepository.findById(chatId).get();
 
             if (user.getToken() == null) {
                 String newKeyId = Requests.registerKey(user.getUsername()).getId();
@@ -356,7 +356,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
 
             userRepository.findAll().forEach(el -> {
-                if (el.getTrafficUsed() == null) {
+                if (el.getTokenKey() != null && el.getTrafficUsed() == null) {
                     InlineKeyboardButton button = new InlineKeyboardButton();
                     button.setText(el.getUsername());
                     button.setCallbackData("delete_" + el.getUsername()); // Уникальная callback data
@@ -382,7 +382,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         Map<String, String> actualMapUsernameToId = new LinkedHashMap<>();
 
         userRepository.findAll().forEach(el -> {
-            if (el.getTokenKey() != null) {
+            if (el.getTokenKey() != null && el.getTrafficUsed() == null) {
                 actualMapUsernameToId.put(el.getUsername(), el.getToken());
             }
         });
@@ -390,7 +390,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         Map<String, Long> actualMapUsernameToChatId = new LinkedHashMap<>();
 
         userRepository.findAll().forEach(el -> {
-            if (el.getTokenKey() != null) {
+            if (el.getTokenKey() != null && el.getTrafficUsed() == null) {
                 actualMapUsernameToChatId.put(el.getUsername(), el.getChatId());
             }
         });

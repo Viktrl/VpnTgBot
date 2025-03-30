@@ -8,6 +8,7 @@ import lombok.SneakyThrows;
 import me.viktrl.VpnTgBot.config.BotConfig;
 import me.viktrl.VpnTgBot.service.POJOs.CreateKeyRequest;
 import me.viktrl.VpnTgBot.service.POJOs.KeyResponse;
+import org.springframework.data.jpa.repository.query.JSqlParserUtils;
 
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -52,7 +53,7 @@ public class Requests extends TelegramBot {
     }
 
     static KeyResponse registerKey(String name) {
-        return new GsonBuilder().setPrettyPrinting().create().fromJson(getResponse("access-keys", "POST", new GsonBuilder().setPrettyPrinting().create().toJson(new CreateKeyRequest(name))).responseBody, KeyResponse.class);
+        return new GsonBuilder().setPrettyPrinting().create().fromJson(getResponse("/access-keys", "POST", new GsonBuilder().setPrettyPrinting().create().toJson(new CreateKeyRequest(name))).responseBody, KeyResponse.class);
     }
 
     static boolean deleteKey(String keyId) {
@@ -60,7 +61,7 @@ public class Requests extends TelegramBot {
     }
 
     static KeyResponse getAccessKey(String id) {
-        return new GsonBuilder().setPrettyPrinting().create().fromJson(getResponse("access-keys" + id, "GET", null).responseBody, KeyResponse.class);
+        return new GsonBuilder().setPrettyPrinting().create().fromJson(getResponse("/access-keys/" + id, "GET", null).responseBody, KeyResponse.class);
     }
 
     @SneakyThrows
@@ -87,7 +88,7 @@ public class Requests extends TelegramBot {
                     : httpConn.getErrorStream();
             Scanner s = new Scanner(responseStream).useDelimiter("\\A");
             String response = s.hasNext() ? s.next() : "";
-
+            System.out.println("sout = " + response);
             return new Response(httpConn.getResponseCode(), response);
         } catch (Exception e) {
             e.printStackTrace();
