@@ -107,7 +107,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     startCommand(chatId,
                             """
                                     1. Скопируйте ключ доступа (используйте команду "Мой ключ")
-
+                                    
                                     2. Скачайте и установите подходящее вашему устройству приложение Outline:\s
                                     iOS: https://itunes.apple.com/app/outline-app/id1356177741
                                     Android: https://play.google.com/store/apps/details?id=org.outline.android.client
@@ -115,9 +115,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                                     Windows: https://s3.amazonaws.com/outline-releases/client/windows/stable/Outline-Client.exe
                                     Linux: https://s3.amazonaws.com/outline-releases/client/linux/stable/Outline-Client.AppImage
                                     Дополнительная ссылка для Android: https://s3.amazonaws.com/outline-releases/client/android/stable/Outline-Client.apk
-
+                                    
                                     3. Откройте клиент Outline. Если ваш ключ доступа определился автоматически, нажмите "Подключиться". Если этого не произошло, вставьте ключ в поле и нажмите "Подключиться".
-
+                                    
                                     Теперь у вас есть доступ к свободному интернету. Чтобы убедиться, что вы подключились к серверу, зайдите на 2ip.ru, и проверьте IP.
                                     """);
                     break;
@@ -381,7 +381,18 @@ public class TelegramBot extends TelegramLongPollingBot {
     private void deleteKeyByUsername(Long chatId, String username) {
         try {
             User user = userRepository.findById(chatId).get();
+
+            Map<String, String> actualMapUsernameToId = new LinkedHashMap<>();
+
+            userRepository.findAll().forEach(el -> {
+                if (el.getTokenKey() != null) {
+                    actualMapUsernameToId.put(el.getUsername(), el.getToken());
+                }
+            });
+
             if (user != null) {
+                Requests.deleteKey(actualMapUsernameToId.get(username));
+
                 user.setToken(null);
                 user.setTokenKey(null);
                 userRepository.save(user);
