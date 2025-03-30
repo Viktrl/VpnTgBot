@@ -2,9 +2,11 @@ package me.viktrl.VpnTgBot.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.GsonBuilder;
 import lombok.NonNull;
 import lombok.SneakyThrows;
 import me.viktrl.VpnTgBot.config.BotConfig;
+import me.viktrl.VpnTgBot.service.POJOs.CreateKeyRequest;
 
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -48,8 +50,8 @@ public class Requests extends TelegramBot {
         return trafficData;
     }
 
-    static void registerKey(String name) {
-        getResponse("access-keys", "POST", )
+    static String registerKey(String name) {
+        return getResponse("access-keys", "POST", new GsonBuilder().setPrettyPrinting().create().toJson(new CreateKeyRequest(name))).responseBody;
     }
 
     static boolean deleteKey(String keyId) {

@@ -206,6 +206,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             User user = userRepository.findById(message.getFrom().getId()).get();
 
             if (user.getToken() == null) {
+                Requests.registerKey(user.getUsername());
+
                 int newKeyId = outlineWrapper.generateKey().id;
                 Requests.registerKey("\"{\\\"name\\\":\\\"aes-192-gcm\\\"}\"");
 
