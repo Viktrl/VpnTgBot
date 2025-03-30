@@ -8,7 +8,6 @@ import lombok.SneakyThrows;
 import me.viktrl.VpnTgBot.config.BotConfig;
 import me.viktrl.VpnTgBot.service.POJOs.CreateKeyRequest;
 import me.viktrl.VpnTgBot.service.POJOs.KeyResponse;
-import org.springframework.data.jpa.repository.query.JSqlParserUtils;
 
 import javax.net.ssl.*;
 import java.io.IOException;
