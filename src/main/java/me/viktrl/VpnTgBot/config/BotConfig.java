@@ -17,4 +17,7 @@ public class BotConfig {
 
     @Value("${outline.api.url}")
     String outlineApiUrl;
+
+    @Value("${admin}")
+    String admin;
 }

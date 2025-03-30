@@ -39,11 +39,13 @@ public class TelegramBot extends TelegramLongPollingBot {
     UserRepository userRepository;
     BotConfig config;
     static String apiUrl;
+    static String admin;
 
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
         this.config = config;
         apiUrl = config.getOutlineApiUrl();
+        admin = config.getAdmin();
 
         List<BotCommand> listCommand = new ArrayList<>();
         listCommand.add(new BotCommand("/start", "Начать"));
@@ -153,7 +155,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             keyboardRows.add(row);
         }
 
-        if (user.getUsername().equals("unmaskked")) {
+        if (user.getUsername().equals(admin)) {
             row = new KeyboardRow();
             row.add("Админ панель");
             keyboardRows.add(row);
@@ -274,7 +276,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         var chatId = message.getChatId();
         User user = userRepository.findById(chatId).get();
 
-        if (user.getUsername().equals("unmaskked")) {
+        if (user.getUsername().equals(admin)) {
             ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
             replyKeyboardMarkup.setResizeKeyboard(true);
             List<KeyboardRow> keyboardRows = new ArrayList<>();
@@ -301,7 +303,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         var chatId = message.getChatId();
         User user = userRepository.findById(chatId).get();
 
-        if (user.getUsername().equals("unmaskked")) {
+        if (user.getUsername().equals(admin)) {
             InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
             List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
 
