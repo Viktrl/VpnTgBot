@@ -395,17 +395,19 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
         });
 
-        User user = userRepository.findById(actualMapUsernameToChatId.get(username));
+        Optional<User> optionalUser = userRepository.findById(actualMapUsernameToChatId.get(username));
 
         try {
-            if (userRepository. != null) {
+            if (optionalUser.isPresent()) {
+                User user = optionalUser.get();
+                
                 Requests.deleteKey(actualMapUsernameToId.get(username));
 
-//                user.setToken(null);
-//                user.setTokenKey(null);
-//                userRepository.save(user);
+                user.setToken(null);
+                user.setTokenKey(null);
+                userRepository.save(user);
 
-                String answerToUser = "Ключ удален";
+                String answerToUser = "Ключ пользователя " + actualMapUsernameToId.get(username) + " удален";
                 execute(new SendMessage(String.valueOf(chatId), answerToUser));
             } else {
                 execute(new SendMessage(String.valueOf(chatId), "Пользователь не найден"));
