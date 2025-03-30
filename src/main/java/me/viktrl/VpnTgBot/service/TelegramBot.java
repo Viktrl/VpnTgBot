@@ -379,23 +379,31 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void deleteKeyByUsername(Long chatId, String username) {
+        Map<String, String> actualMapUsernameToId = new LinkedHashMap<>();
+
+        userRepository.findAll().forEach(el -> {
+            if (el.getTokenKey() != null) {
+                actualMapUsernameToId.put(el.getUsername(), el.getToken());
+            }
+        });
+
+        Map<String, Long> actualMapUsernameToChatId = new LinkedHashMap<>();
+
+        userRepository.findAll().forEach(el -> {
+            if (el.getTokenKey() != null) {
+                actualMapUsernameToChatId.put(el.getUsername(), el.getChatId());
+            }
+        });
+
+        User user = userRepository.findById(actualMapUsernameToChatId.get(username));
+
         try {
-            User user = userRepository.findById(chatId).get();
-
-            Map<String, String> actualMapUsernameToId = new LinkedHashMap<>();
-
-            userRepository.findAll().forEach(el -> {
-                if (el.getTokenKey() != null) {
-                    actualMapUsernameToId.put(el.getUsername(), el.getToken());
-                }
-            });
-
-            if (user != null) {
+            if (userRepository. != null) {
                 Requests.deleteKey(actualMapUsernameToId.get(username));
 
-                user.setToken(null);
-                user.setTokenKey(null);
-                userRepository.save(user);
+//                user.setToken(null);
+//                user.setTokenKey(null);
+//                userRepository.save(user);
 
                 String answerToUser = "Ключ удален";
                 execute(new SendMessage(String.valueOf(chatId), answerToUser));
