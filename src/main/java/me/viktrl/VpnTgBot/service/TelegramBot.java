@@ -225,7 +225,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             User user = userRepository.findById(message.getFrom().getId()).get();
             if (userRepository.findById(message.getFrom().getId()).isPresent()) {
-                if (message.getChat().getUserName().equals("unmaskked")) {
+                if (message.getChat().getUserName().equals(admin)) {
                     Map<String, Double> answerForMe = new LinkedHashMap<>();
 
                     userRepository.findAll().forEach(el -> answerForMe.put(el.getUsername(), el.getTrafficUsed()));
