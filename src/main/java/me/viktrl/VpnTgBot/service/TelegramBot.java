@@ -43,7 +43,7 @@ public class TelegramBot extends TelegramLongPollingBot {
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
         this.config = config;
-        this.apiUrl = config.getOutlineApiUrl();
+        apiUrl = config.getOutlineApiUrl();
 
         List<BotCommand> listCommand = new ArrayList<>();
         listCommand.add(new BotCommand("/start", "Начать"));
@@ -54,7 +54,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(22, 5);
+            scheduleDailyTask(1, 59);
         } catch (Exception e) {
             log.error("Ошибка при инициализации класса: " + e.getMessage());
         }
@@ -194,12 +194,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             String AnswerUserSuccessCreated = "Добрый день! Вы успешно зарегистрировались.\nВаш логин в системе: "
                     + user.getUsername() + "\n\nСоздайте токен используя команду \"Зарегистрировать ключ\"";
-            try {
-                execute(new SendMessage(String.valueOf(chatId), AnswerUserSuccessCreated));
-            } catch (TelegramApiException e) {
-                log.error("Error yopta: " + e.getMessage());
-            }
+
+            sendMessage(chatId, AnswerUserSuccessCreated);
         }
+
     }
 
     private void registerKey(Message message) {
@@ -217,24 +215,13 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                 String answerToUser = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey()
                         + "\n\nИспользуйте команду \"Инструкция\", чтобы получить инструкцию к легкой установке и настройке ВПН";
-                try {
-                    execute(new SendMessage(String.valueOf(chatId), answerToUser));
-                } catch (TelegramApiException e) {
-                    log.error("Error yopta: " + e.getMessage());
-                }
+
+                sendMessage(chatId, answerToUser);
             } else {
-                try {
-                    execute(new SendMessage(String.valueOf(chatId), "У вас уже есть ключ"));
-                } catch (TelegramApiException e) {
-                    log.error("Error yopta: " + e.getMessage());
-                }
+                sendMessage(chatId, "У вас уже есть ключ");
             }
         } catch (Exception e) {
-            try {
-                execute(new SendMessage(String.valueOf(chatId), "Ошибка"));
-            } catch (TelegramApiException e2) {
-                log.error("Error yopta: " + e2.getMessage());
-            }
+            sendMessage(chatId, "Ошибка епте");
         }
     }
 
@@ -244,44 +231,33 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             User user = userRepository.findById(message.getFrom().getId()).get();
             if (userRepository.findById(message.getFrom().getId()).isPresent()) {
-                try {
-                    if (message.getChat().getUserName().equals("unmaskked")) {
-                        Map<String, Double> answerForMe = new LinkedHashMap<>();
+                if (message.getChat().getUserName().equals("unmaskked")) {
+                    Map<String, Double> answerForMe = new LinkedHashMap<>();
 
-                        userRepository.findAll().forEach(el -> answerForMe.put(el.getUsername(), el.getTrafficUsed()));
+                    userRepository.findAll().forEach(el -> answerForMe.put(el.getUsername(), el.getTrafficUsed()));
 
-                        String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create()
-                                .toJson(answerForMe);
-                        String showAdminAnswer = "Логин: " + user.getUsername() + "\n" +
-                                "ID: " + user.getToken() + "\n" +
-                                "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                                "Использовано трафика:\n" + prettyJsonAnswerForMe;
-                        execute(new SendMessage(String.valueOf(chatId), showAdminAnswer));
-                    } else {
-                        Double trafficByUser = user.getTrafficUsed();
-                        String showUserAnswer = "Логин: " + user.getUsername() + "\n" +
-                                "ID: " + user.getToken() + "\n" +
-                                "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                                "Использовано трафика: " + trafficByUser + " GB";
-                        execute(new SendMessage(String.valueOf(chatId), showUserAnswer));
-                    }
-                } catch (TelegramApiException e) {
-                    log.error("Error yopta: " + e.getMessage());
+                    String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create()
+                            .toJson(answerForMe);
+                    String showAdminAnswer = "Логин: " + user.getUsername() + "\n" +
+                            "ID: " + user.getToken() + "\n" +
+                            "Ключ для ВПН: " + user.getTokenKey() + "\n" +
+                            "Использовано трафика:\n" + prettyJsonAnswerForMe;
+
+                    sendMessage(chatId, showAdminAnswer);
+                } else {
+                    Double trafficByUser = user.getTrafficUsed();
+                    String showUserAnswer = "Логин: " + user.getUsername() + "\n" +
+                            "ID: " + user.getToken() + "\n" +
+                            "Ключ для ВПН: " + user.getTokenKey() + "\n" +
+                            "Использовано трафика: " + trafficByUser + " GB";
+
+                    sendMessage(chatId, showUserAnswer);
                 }
             } else {
-                try {
-                    execute(new SendMessage(String.valueOf(chatId),
-                            "Вы не зарегистрировались. Используйте команду /start"));
-                } catch (TelegramApiException e) {
-                    log.error("Error yopta: " + e.getMessage());
-                }
+                sendMessage(chatId, "Вы не зарегистрировались. Используйте команду /start");
             }
         } catch (Exception e) {
-            try {
-                execute(new SendMessage(String.valueOf(chatId), "Что то пошло не так."));
-            } catch (TelegramApiException e2) {
-                log.error("Error yopta: " + e2.getMessage());
-            }
+            sendMessage(chatId, "Что то пошло не так.");
         }
     }
 
@@ -295,19 +271,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (showUserKeyAnswer != null) {
                 startCommand(chatId, showUserKeyAnswer);
             } else {
-                try {
-                    execute(new SendMessage(String.valueOf(chatId), "Что то пошло не так."));
-                } catch (TelegramApiException e) {
-                    log.error("1Error yopta: " + e.getMessage());
-                }
+                sendMessage(chatId, "Что то пошло не так.");
             }
         } catch (Exception e) {
-            try {
-                execute(new SendMessage(String.valueOf(chatId),
-                        "Вы не зарегистрировались. Используйте команду /start"));
-            } catch (TelegramApiException e2) {
-                log.error("Error in showUserKey method: " + e2.getMessage());
-            }
+            sendMessage(chatId, "Вы не зарегистрировались. Используйте команду /start");
         }
     }
 
@@ -348,10 +315,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             userRepository.findAll().forEach(el -> {
                 if (el.getTokenKey() != null && el.getTrafficUsed() == null) {
-                    InlineKeyboardButton button = new InlineKeyboardButton();
-                    button.setText(el.getUsername());
-                    button.setCallbackData("delete_" + el.getUsername()); // Уникальная callback data
-                    rowsInline.add(Collections.singletonList(button));
+                    InlineKeyboardButton buttonRow = new InlineKeyboardButton();
+                    buttonRow.setText(el.getUsername());
+                    buttonRow.setCallbackData("delete_" + el.getUsername()); // Уникальная callback data
+                    rowsInline.add(Collections.singletonList(buttonRow));
                 }
             });
 
@@ -370,38 +337,38 @@ public class TelegramBot extends TelegramLongPollingBot {
     }
 
     private void deleteKeyByUsername(Long chatId, String username) {
-        Map<String, String> actualMapUsernameToId = new LinkedHashMap<>();
+        Map<String, String> unActiveUsersMapByUsernameAndTokenId = new LinkedHashMap<>();
 
         userRepository.findAll().forEach(el -> {
             if (el.getTokenKey() != null && el.getTrafficUsed() == null) {
-                actualMapUsernameToId.put(el.getUsername(), el.getToken());
+                unActiveUsersMapByUsernameAndTokenId.put(el.getUsername(), el.getToken());
             }
         });
 
-        Map<String, Long> actualMapUsernameToChatId = new LinkedHashMap<>();
+        Map<String, Long> unActiveUsersMapByUsernameAndChatId = new LinkedHashMap<>();
 
         userRepository.findAll().forEach(el -> {
             if (el.getTokenKey() != null && el.getTrafficUsed() == null) {
-                actualMapUsernameToChatId.put(el.getUsername(), el.getChatId());
+                unActiveUsersMapByUsernameAndChatId.put(el.getUsername(), el.getChatId());
             }
         });
 
-        Optional<User> optionalUser = userRepository.findById(actualMapUsernameToChatId.get(username));
+        Optional<User> optionalUser = userRepository.findById(unActiveUsersMapByUsernameAndChatId.get(username));
 
         try {
             if (optionalUser.isPresent()) {
                 User user = optionalUser.get();
                 
-                Requests.deleteKey(actualMapUsernameToId.get(username));
+                Requests.deleteKey(unActiveUsersMapByUsernameAndTokenId.get(username));
 
                 user.setToken(null);
                 user.setTokenKey(null);
                 userRepository.save(user);
 
-                String answerToUser = "Ключ пользователя " + actualMapUsernameToId.get(username) + " удален";
-                execute(new SendMessage(String.valueOf(chatId), answerToUser));
+                String answerToUser = "Ключ пользователя " + unActiveUsersMapByUsernameAndTokenId.get(username) + " удален";
+                sendMessage(chatId, answerToUser);
             } else {
-                execute(new SendMessage(String.valueOf(chatId), "Пользователь не найден"));
+                sendMessage(chatId, "Пользователь не найден");
             }
         } catch (Exception e) {
             log.error("Error in deleteKeyByUsername method: " + e.getMessage());
@@ -410,16 +377,16 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     public void sendUserMessageAboutTrafficUsed() throws IOException {
         try {
-            Map<Long, Double> list = new LinkedHashMap<>();
+            Map<Long, Double> activeUsersMapByChatIdAndTrafficUsed = new LinkedHashMap<>();
 
             userRepository.findAll().forEach(el -> {
                 if (el.getTrafficUsed() != null) {
-                    list.put(el.getChatId(), el.getTrafficUsed());
+                    activeUsersMapByChatIdAndTrafficUsed.put(el.getChatId(), el.getTrafficUsed());
                 }
             });
 
-            for (Long chatId : list.keySet()) {
-                startCommand(chatId, "Использовано трафика: " + list.get(chatId) + " GB");
+            for (Long chatId : activeUsersMapByChatIdAndTrafficUsed.keySet()) {
+                startCommand(chatId, "Использовано трафика: " + activeUsersMapByChatIdAndTrafficUsed.get(chatId) + " GB");
             }
 
         } catch (Exception e) {
@@ -429,20 +396,20 @@ public class TelegramBot extends TelegramLongPollingBot {
 
     private void saveInDatabaseTrafficUsedByUser() {
         try {
-            Map<String, Long> listOfActiveUsers = new HashMap<>();
+            Map<String, Long> activeUsersMapByTokenIdAndChatId = new HashMap<>();
 
             userRepository.findAll().forEach(el -> {
                 try {
                     if (Requests.getUsedTrafficByUser().containsKey(el.getToken())) {
-                        listOfActiveUsers.put(el.getToken(), el.getChatId());
+                        activeUsersMapByTokenIdAndChatId.put(el.getToken(), el.getChatId());
                     }
                 } catch (IOException e) {
                     System.out.println("Ошибка в saveInDatabaseTrafficUsedByUser(): " + e.getMessage());
                 }
             });
 
-            for (String activeToken : listOfActiveUsers.keySet()) {
-                User user = userRepository.findById(listOfActiveUsers.get(activeToken)).get();
+            for (String activeToken : activeUsersMapByTokenIdAndChatId.keySet()) {
+                User user = userRepository.findById(activeUsersMapByTokenIdAndChatId.get(activeToken)).get();
                 Map<String, Double> getUsedTrafficByUserInGb = new LinkedHashMap<>();
 
                 Requests.getUsedTrafficByUser().entrySet()
@@ -483,7 +450,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Europe/Moscow"));
         ZonedDateTime nextRun = now.withHour(targetHour).withMinute(targetMinute).withSecond(0);
 
-        if (now.compareTo(nextRun) > 0) { // Если текущее время уже после 10:00, берем завтра
+        if (now.compareTo(nextRun) > 0) {
             nextRun = nextRun.plusDays(1);
         }
 

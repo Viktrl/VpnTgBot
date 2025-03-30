@@ -87,7 +87,6 @@ public class Requests extends TelegramBot {
                     : httpConn.getErrorStream();
             Scanner s = new Scanner(responseStream).useDelimiter("\\A");
             String response = s.hasNext() ? s.next() : "";
-            System.out.println("sout = " + response);
             return new Response(httpConn.getResponseCode(), response);
         } catch (Exception e) {
             e.printStackTrace();
