@@ -82,7 +82,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             switch (message) {
                 case "/start":
-                    startCommand(chatId, "Привет, " + update.getMessage().getChat().getFirstName());
+                    sendMessage(chatId, "Привет, " + update.getMessage().getChat().getFirstName());
                     registerUser(update.getMessage());
                     break;
                 case "Зарегистрировать ключ":
@@ -95,7 +95,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     showUserKey(update.getMessage());
                     break;
                 case "Инструкция":
-                    startCommand(chatId,
+                    sendMessage(chatId,
                             """
                                     1. Скопируйте ключ доступа (используйте команду "Мой ключ")
                                     
@@ -119,7 +119,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     showUsersListToKeyDelete(update.getMessage());
                     break;
                 default:
-                    startCommand(chatId, "Этой команды не существует");
+                    sendMessage(chatId, "Этой команды не существует");
             }
         }
     }
@@ -167,14 +167,6 @@ public class TelegramBot extends TelegramLongPollingBot {
             execute(message);
         } catch (TelegramApiException e) {
             log.error("Error yopta: " + e.getMessage());
-        }
-    }
-
-    private void startCommand(Long chatId, String name) {
-        try {
-            sendMessage(chatId, name);
-        } catch (Exception e) {
-            System.out.println("Error of startCommand method: " + e.getMessage());
         }
     }
 
@@ -269,7 +261,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             String showUserKeyAnswer = user.getTokenKey();
 
             if (showUserKeyAnswer != null) {
-                startCommand(chatId, showUserKeyAnswer);
+                sendMessage(chatId, showUserKeyAnswer);
             } else {
                 sendMessage(chatId, "Что то пошло не так.");
             }
@@ -386,7 +378,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             });
 
             for (Long chatId : activeUsersMapByChatIdAndTrafficUsed.keySet()) {
-                startCommand(chatId, "Использовано трафика: " + activeUsersMapByChatIdAndTrafficUsed.get(chatId) + " GB");
+                sendMessage(chatId, "Использовано трафика: " + activeUsersMapByChatIdAndTrafficUsed.get(chatId) + " GB");
             }
 
         } catch (Exception e) {
