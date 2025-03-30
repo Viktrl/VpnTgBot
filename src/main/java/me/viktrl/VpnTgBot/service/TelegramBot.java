@@ -18,7 +18,9 @@ import org.telegram.telegrambots.meta.api.objects.Message;
 import org.telegram.telegrambots.meta.api.objects.Update;
 import org.telegram.telegrambots.meta.api.objects.commands.BotCommand;
 import org.telegram.telegrambots.meta.api.objects.commands.scope.BotCommandScopeDefault;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
@@ -54,10 +56,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         List<BotCommand> listCommand = new ArrayList<>();
         listCommand.add(new BotCommand("/start", "Начать"));
-//        listCommand.add(new BotCommand("Зарегистрировать ключ", "Создать ВПН"));
-//        listCommand.add(new BotCommand("Мои данные", "Мои данные"));
-//        listCommand.add(new BotCommand("Мой ключ", "Мой ключ доступа"));
-//        listCommand.add(new BotCommand("Инструкция", "Инструкция"));
+        // listCommand.add(new BotCommand("Зарегистрировать ключ", "Создать ВПН"));
+        // listCommand.add(new BotCommand("Мои данные", "Мои данные"));
+        // listCommand.add(new BotCommand("Мой ключ", "Мой ключ доступа"));
+        // listCommand.add(new BotCommand("Инструкция", "Инструкция"));
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
@@ -75,7 +77,15 @@ public class TelegramBot extends TelegramLongPollingBot {
     @SneakyThrows
     @Override
     public void onUpdateReceived(Update update) {
-        if (update.hasMessage() && update.getMessage().hasText()) {
+        if (update.hasCallbackQuery()) {
+            String callBackData = update.getCallbackQuery().getData();
+            long chatId = update.getCallbackQuery().getMessage().getChatId();
+
+            if (callBackData.startsWith("delete_")) {
+                String username = callBackData.substring(7);
+                deleteKeyByUsername(chatId, username);
+            }
+        } else if (update.hasMessage() && update.getMessage().hasText()) {
             String message = update.getMessage().getText();
             long chatId = update.getMessage().getChatId();
 
@@ -85,7 +95,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     registerUser(update.getMessage());
                     break;
                 case "Зарегистрировать ключ":
-//                    registerKey(update.getMessage());
+                    // registerKey(update.getMessage());
                     break;
                 case "Мои данные":
                     showUserAccount(update.getMessage());
@@ -94,27 +104,28 @@ public class TelegramBot extends TelegramLongPollingBot {
                     showUserKey(update.getMessage());
                     break;
                 case "Инструкция":
-                    startCommand(chatId, """
-                            1. Скопируйте ключ доступа (используйте команду "Мой ключ")
-                            
-                            2. Скачайте и установите подходящее вашему устройству приложение Outline:\s
-                            iOS: https://itunes.apple.com/app/outline-app/id1356177741
-                            Android: https://play.google.com/store/apps/details?id=org.outline.android.client
-                            macOS: https://itunes.apple.com/app/outline-app/id1356178125
-                            Windows: https://s3.amazonaws.com/outline-releases/client/windows/stable/Outline-Client.exe
-                            Linux: https://s3.amazonaws.com/outline-releases/client/linux/stable/Outline-Client.AppImage
-                            Дополнительная ссылка для Android: https://s3.amazonaws.com/outline-releases/client/android/stable/Outline-Client.apk
-                            
-                            3. Откройте клиент Outline. Если ваш ключ доступа определился автоматически, нажмите "Подключиться". Если этого не произошло, вставьте ключ в поле и нажмите "Подключиться".
-                            
-                            Теперь у вас есть доступ к свободному интернету. Чтобы убедиться, что вы подключились к серверу, зайдите на 2ip.ru, и проверьте IP.
-                            """);
+                    startCommand(chatId,
+                            """
+                                    1. Скопируйте ключ доступа (используйте команду "Мой ключ")
+
+                                    2. Скачайте и установите подходящее вашему устройству приложение Outline:\s
+                                    iOS: https://itunes.apple.com/app/outline-app/id1356177741
+                                    Android: https://play.google.com/store/apps/details?id=org.outline.android.client
+                                    macOS: https://itunes.apple.com/app/outline-app/id1356178125
+                                    Windows: https://s3.amazonaws.com/outline-releases/client/windows/stable/Outline-Client.exe
+                                    Linux: https://s3.amazonaws.com/outline-releases/client/linux/stable/Outline-Client.AppImage
+                                    Дополнительная ссылка для Android: https://s3.amazonaws.com/outline-releases/client/android/stable/Outline-Client.apk
+
+                                    3. Откройте клиент Outline. Если ваш ключ доступа определился автоматически, нажмите "Подключиться". Если этого не произошло, вставьте ключ в поле и нажмите "Подключиться".
+
+                                    Теперь у вас есть доступ к свободному интернету. Чтобы убедиться, что вы подключились к серверу, зайдите на 2ip.ru, и проверьте IP.
+                                    """);
                     break;
                 case "Админ панель":
                     adminPanelCommand(update.getMessage());
                     break;
                 case "Удалить ключ":
-                    deleteKey(update.getMessage());
+                    showUsersListToKeyDelete(update.getMessage());
                     break;
                 default:
                     startCommand(chatId, "Этой команды не существует");
@@ -190,7 +201,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             userRepository.save(user);
             log.info("User registered: " + user);
 
-            String AnswerUserSuccessCreated = "Добрый день! Вы успешно зарегистрировались.\nВаш логин в системе: " + user.getUsername() + "\n\nСоздайте токен используя команду \"Зарегистрировать ключ\"";
+            String AnswerUserSuccessCreated = "Добрый день! Вы успешно зарегистрировались.\nВаш логин в системе: "
+                    + user.getUsername() + "\n\nСоздайте токен используя команду \"Зарегистрировать ключ\"";
             try {
                 execute(new SendMessage(String.valueOf(chatId), AnswerUserSuccessCreated));
             } catch (TelegramApiException e) {
@@ -212,7 +224,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                 user.setTokenKey(Requests.getAccessKey(newKeyId).getAccessUrl());
                 userRepository.save(user);
 
-                String answerToUser = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey() + "\n\nИспользуйте команду \"Инструкция\", чтобы получить инструкцию к легкой установке и настройке ВПН";
+                String answerToUser = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey()
+                        + "\n\nИспользуйте команду \"Инструкция\", чтобы получить инструкцию к легкой установке и настройке ВПН";
                 try {
                     execute(new SendMessage(String.valueOf(chatId), answerToUser));
                 } catch (TelegramApiException e) {
@@ -246,7 +259,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                         userRepository.findAll().forEach(el -> answerForMe.put(el.getUsername(), el.getTrafficUsed()));
 
-                        String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create().toJson(answerForMe);
+                        String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create()
+                                .toJson(answerForMe);
                         String showAdminAnswer = "Логин: " + user.getUsername() + "\n" +
                                 "ID: " + user.getToken() + "\n" +
                                 "Ключ для ВПН: " + user.getTokenKey() + "\n" +
@@ -265,7 +279,8 @@ public class TelegramBot extends TelegramLongPollingBot {
                 }
             } else {
                 try {
-                    execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались. Используйте команду /start"));
+                    execute(new SendMessage(String.valueOf(chatId),
+                            "Вы не зарегистрировались. Используйте команду /start"));
                 } catch (TelegramApiException e) {
                     log.error("Error yopta: " + e.getMessage());
                 }
@@ -297,7 +312,8 @@ public class TelegramBot extends TelegramLongPollingBot {
             }
         } catch (Exception e) {
             try {
-                execute(new SendMessage(String.valueOf(chatId), "Вы не зарегистрировались. Используйте команду /start"));
+                execute(new SendMessage(String.valueOf(chatId),
+                        "Вы не зарегистрировались. Используйте команду /start"));
             } catch (TelegramApiException e2) {
                 log.error("Error in showUserKey method: " + e2.getMessage());
             }
@@ -331,39 +347,52 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void deleteKey(Message message) {
+    private void showUsersListToKeyDelete(Message message) {
         var chatId = message.getChatId();
         User user = userRepository.findById(chatId).get();
 
         if (user.getUsername().equals("unmaskked")) {
-            Map<String, String> list = new LinkedHashMap<>();
+            InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
+            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
             userRepository.findAll().forEach(el -> {
                 if (el.getTrafficUsed() == null) {
-                    list.put(el.getUsername(), el.getToken());
+                    InlineKeyboardButton button = new InlineKeyboardButton();
+                    button.setText(el.getUsername());
+                    button.setCallbackData("delete_" + el.getUsername()); // Уникальная callback data
+                    rowsInline.add(Collections.singletonList(button));
                 }
             });
+
             SendMessage sendMessage = new SendMessage();
             sendMessage.setChatId(chatId);
-            sendMessage.setText("Список хуёвых пользователей: " + list);
-
-            ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-            replyKeyboardMarkup.setResizeKeyboard(true);
-            List<KeyboardRow> keyboardRows = new ArrayList<>();
-
-            for(String value : list.keySet()) {
-                KeyboardRow row = new KeyboardRow();
-                row.add(value);
-                keyboardRows.add(row);
-            }
-            replyKeyboardMarkup.setKeyboard(keyboardRows);
-
-            sendMessage.setReplyMarkup(replyKeyboardMarkup);
+            sendMessage.setText("Выберите пользователя для удаления ключа:");
+            inlineKeyboardMarkup.setKeyboard(rowsInline);
+            sendMessage.setReplyMarkup(inlineKeyboardMarkup);
 
             try {
                 execute(sendMessage);
             } catch (TelegramApiException e) {
-                log.error("Error yopta: " + e.getMessage());
+                log.error("Error while sending inline keyboard: " + e.getMessage());
             }
+        }
+    }
+
+    private void deleteKeyByUsername(Long chatId, String username) {
+        try {
+            User user = userRepository.findById(chatId).get();
+            if (user != null) {
+                user.setToken(null);
+                user.setTokenKey(null);
+                userRepository.save(user);
+
+                String answerToUser = "Ключ удален";
+                execute(new SendMessage(String.valueOf(chatId), answerToUser));
+            } else {
+                execute(new SendMessage(String.valueOf(chatId), "Пользователь не найден"));
+            }
+        } catch (Exception e) {
+            log.error("Error in deleteKeyByUsername method: " + e.getMessage());
         }
     }
 
@@ -407,13 +436,15 @@ public class TelegramBot extends TelegramLongPollingBot {
                 Requests.getUsedTrafficByUser().entrySet()
                         .stream()
                         .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                        .forEachOrdered(e -> getUsedTrafficByUserInGb.put(e.getKey(), Math.round((e.getValue() / 1_073_741_824.0) * 100.0) / 100.0));
+                        .forEachOrdered(e -> getUsedTrafficByUserInGb.put(e.getKey(),
+                                Math.round((e.getValue() / 1_073_741_824.0) * 100.0) / 100.0));
 
                 user.setTrafficUsed(getUsedTrafficByUserInGb.get(activeToken));
                 userRepository.save(user);
             }
         } catch (Exception e) {
-            System.out.println("Ошибка при сохранении в БД трафка пользователей: " + e.getMessage() + "\n" + e.getStackTrace());
+            System.out.println(
+                    "Ошибка при сохранении в БД трафка пользователей: " + e.getMessage() + "\n" + e.getStackTrace());
         }
     }
 
@@ -424,7 +455,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             Runnable task = () -> {
                 System.out.println("Запуск задачи: " + LocalDateTime.now());
                 saveInDatabaseTrafficUsedByUser();
-//                    sendUserMessageAboutTrafficUsed();
+                // sendUserMessageAboutTrafficUsed();
             };
 
             long initialDelay = calculateInitialDelay(targetHour, targetMinute);
