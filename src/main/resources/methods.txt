@@ -66,3 +66,41 @@ private void checkAndNotify() {
             e.printStackTrace();
         }
     }
+
+private void listOfBadUsers(Message message) {
+        var chatId = message.getChatId();
+        User user = userRepository.findById(chatId).get();
+
+        Map<String, String> list = new LinkedHashMap<>();
+
+        userRepository.findAll().forEach(el -> {
+            if (el.getTrafficUsed() == null) {
+                list.put(el.getUsername(), el.getToken());
+            }
+        });
+
+        if (user.getUsername().equals("unmaskked")) {
+            SendMessage sendMessage = new SendMessage();
+            sendMessage.setChatId(chatId);
+            sendMessage.setText("Список хуёвых пользователей: " + list);
+
+            ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+            replyKeyboardMarkup.setResizeKeyboard(true);
+            List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+            for(String value : list.keySet()) {
+                KeyboardRow row = new KeyboardRow();
+                row.add(value);
+                keyboardRows.add(row);
+            }
+            replyKeyboardMarkup.setKeyboard(keyboardRows);
+
+            sendMessage.setReplyMarkup(replyKeyboardMarkup);
+
+            try {
+                execute(sendMessage);
+            } catch (TelegramApiException e) {
+                log.error("Error yopta: " + e.getMessage());
+            }
+        }
+    }

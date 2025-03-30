@@ -114,7 +114,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     adminPanelCommand(update.getMessage());
                     break;
                 case "Удалить ключ":
-                    deleteKeyCommand(update.getMessage());
+                    deleteKey(update.getMessage());
                     break;
                 default:
                     startCommand(chatId, "Этой команды не существует");
@@ -206,18 +206,15 @@ public class TelegramBot extends TelegramLongPollingBot {
             User user = userRepository.findById(message.getFrom().getId()).get();
 
             if (user.getToken() == null) {
-                Requests.registerKey(user.getUsername());
+                String newKeyId = Requests.registerKey(user.getUsername()).getId();
 
-                int newKeyId = outlineWrapper.generateKey().id;
-                Requests.registerKey("\"{\\\"name\\\":\\\"aes-192-gcm\\\"}\"");
-
-                user.setToken(String.valueOf(outlineWrapper.getKey(newKeyId).id));
-                user.setTokenKey(outlineWrapper.getKey(newKeyId).accessUrl);
+                user.setToken(Requests.getAccessKey(newKeyId).getId());
+                user.setTokenKey(Requests.getAccessKey(newKeyId).getAccessUrl());
                 userRepository.save(user);
 
-                String AnswerVpnSuccessCreated = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey() + "\n\nИспользуйте команду \"Инструкция\", чтобы получить инструкцию к легкой установке и настройке ВПН";
+                String answerToUser = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey() + "\n\nИспользуйте команду \"Инструкция\", чтобы получить инструкцию к легкой установке и настройке ВПН";
                 try {
-                    execute(new SendMessage(String.valueOf(chatId), AnswerVpnSuccessCreated));
+                    execute(new SendMessage(String.valueOf(chatId), answerToUser));
                 } catch (TelegramApiException e) {
                     log.error("Error yopta: " + e.getMessage());
                 }
@@ -334,22 +331,38 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void deleteKeyCommand(Message message) {
+    private void deleteKey(Message message) {
         var chatId = message.getChatId();
-        String enteredText = message.getText();
         User user = userRepository.findById(chatId).get();
 
         if (user.getUsername().equals("unmaskked")) {
+            Map<String, String> list = new LinkedHashMap<>();
+            userRepository.findAll().forEach(el -> {
+                if (el.getTrafficUsed() == null) {
+                    list.put(el.getUsername(), el.getToken());
+                }
+            });
             SendMessage sendMessage = new SendMessage();
             sendMessage.setChatId(chatId);
-            sendMessage.setText("Введите ID ключа, который хотите удалить");
+            sendMessage.setText("Список хуёвых пользователей: " + list);
+
+            ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
+            replyKeyboardMarkup.setResizeKeyboard(true);
+            List<KeyboardRow> keyboardRows = new ArrayList<>();
+
+            for(String value : list.keySet()) {
+                KeyboardRow row = new KeyboardRow();
+                row.add(value);
+                keyboardRows.add(row);
+            }
+            replyKeyboardMarkup.setKeyboard(keyboardRows);
+
+            sendMessage.setReplyMarkup(replyKeyboardMarkup);
 
             try {
                 execute(sendMessage);
-                Requests.deleteKey(enteredText);
-                System.out.println("sout = " + enteredText);
-            } catch (IOException | TelegramApiException e) {
-                throw new RuntimeException(e);
+            } catch (TelegramApiException e) {
+                log.error("Error yopta: " + e.getMessage());
             }
         }
     }

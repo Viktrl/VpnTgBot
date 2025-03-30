@@ -7,11 +7,11 @@ import lombok.NonNull;
 import lombok.SneakyThrows;
 import me.viktrl.VpnTgBot.config.BotConfig;
 import me.viktrl.VpnTgBot.service.POJOs.CreateKeyRequest;
+import me.viktrl.VpnTgBot.service.POJOs.KeyResponse;
 
 import javax.net.ssl.*;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.net.URL;
 import java.security.KeyManagementException;
@@ -24,6 +24,8 @@ import java.util.Scanner;
 
 public class Requests extends TelegramBot {
 
+    static ObjectMapper objectMapper = new ObjectMapper();
+
     public Requests(BotConfig config) {
         super(config);
     }
@@ -35,7 +37,6 @@ public class Requests extends TelegramBot {
         connection.setRequestMethod("GET");
         removeSSLVerifier(connection);
 
-        ObjectMapper objectMapper = new ObjectMapper();
         JsonNode jsonResponse = objectMapper.readTree(connection.getInputStream());
 
         JsonNode userTraffic = jsonResponse.get("bytesTransferredByUserId");
@@ -50,12 +51,16 @@ public class Requests extends TelegramBot {
         return trafficData;
     }
 
-    static String registerKey(String name) {
-        return getResponse("access-keys", "POST", new GsonBuilder().setPrettyPrinting().create().toJson(new CreateKeyRequest(name))).responseBody;
+    static KeyResponse registerKey(String name) {
+        return new GsonBuilder().setPrettyPrinting().create().fromJson(getResponse("access-keys", "POST", new GsonBuilder().setPrettyPrinting().create().toJson(new CreateKeyRequest(name))).responseBody, KeyResponse.class);
     }
 
     static boolean deleteKey(String keyId) {
         return getResponse("/access-keys/" + keyId, "DELETE", null).responseCode == 204;
+    }
+
+    static KeyResponse getAccessKey(String id) {
+        return new GsonBuilder().setPrettyPrinting().create().fromJson(getResponse("access-keys" + id, "GET", null).responseBody, KeyResponse.class);
     }
 
     @SneakyThrows
