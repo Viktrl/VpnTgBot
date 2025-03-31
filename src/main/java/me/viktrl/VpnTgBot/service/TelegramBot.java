@@ -56,7 +56,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(1, 59);
+            scheduleDailyTask(11, 5);
         } catch (Exception e) {
             log.error("Ошибка при инициализации класса: " + e.getMessage());
         }
@@ -367,7 +367,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    public void sendUserMessageAboutTrafficUsed() throws IOException {
+    public void sendUserMessageAboutTrafficUsed() {
         try {
             Map<Long, Double> activeUsersMapByChatIdAndTrafficUsed = new LinkedHashMap<>();
 
@@ -426,7 +426,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             Runnable task = () -> {
                 System.out.println("Запуск задачи: " + LocalDateTime.now());
                 saveInDatabaseTrafficUsedByUser();
-                // sendUserMessageAboutTrafficUsed();
+                sendUserMessageAboutTrafficUsed();
             };
 
             long initialDelay = calculateInitialDelay(targetHour, targetMinute);
