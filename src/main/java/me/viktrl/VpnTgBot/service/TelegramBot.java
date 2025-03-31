@@ -88,7 +88,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     registerUser(update.getMessage());
                     break;
                 case "Зарегистрировать ключ":
-                     registerKey(update.getMessage());
+                    registerKey(update.getMessage());
                     break;
                 case "Мои данные":
                     showUserAccount(update.getMessage());
@@ -184,7 +184,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
 
             userRepository.save(user);
-            log.info("User registered: " + user);
+//            log.info("User registered: " + user);
 
             String AnswerUserSuccessCreated = "Добрый день! Вы успешно зарегистрировались.\nВаш логин в системе: "
                     + user.getUsername() + "\n\nСоздайте токен используя команду \"Зарегистрировать ключ\"";
@@ -215,7 +215,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 sendMessage(chatId, "У вас уже есть ключ");
             }
         } catch (Exception e) {
-            sendMessage(chatId, "Ошибка епте");
+            sendMessage(chatId, "Что то пошло не так");
         }
     }
 
@@ -230,8 +230,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                     userRepository.findAll().forEach(el -> answerForMe.put(el.getUsername(), el.getTrafficUsed()));
 
-                    String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create()
-                            .toJson(answerForMe);
+                    String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create().toJson(answerForMe);
                     String showAdminAnswer = "Логин: " + user.getUsername() + "\n" +
                             "ID: " + user.getToken() + "\n" +
                             "Ключ для ВПН: " + user.getTokenKey() + "\n" +
@@ -248,10 +247,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage(chatId, showUserAnswer);
                 }
             } else {
-                sendMessage(chatId, "Вы не зарегистрировались. Используйте команду /start");
+                sendMessage(chatId, "Вы не зарегистрировались");
             }
         } catch (Exception e) {
-            sendMessage(chatId, "Что то пошло не так.");
+            sendMessage(chatId, "Что то пошло не так");
         }
     }
 
@@ -260,15 +259,14 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             User user = userRepository.findById(message.getFrom().getId()).get();
-            String showUserKeyAnswer = user.getTokenKey();
 
-            if (showUserKeyAnswer != null) {
-                sendMessage(chatId, showUserKeyAnswer);
+            if (user.getTokenKey() != null) {
+                sendMessage(chatId, user.getTokenKey());
             } else {
-                sendMessage(chatId, "Что то пошло не так.");
+                sendMessage(chatId, "У вас нет ключа");
             }
         } catch (Exception e) {
-            sendMessage(chatId, "Вы не зарегистрировались. Используйте команду /start");
+            sendMessage(chatId, "Что то пошло не так");
         }
     }
 
@@ -352,7 +350,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         try {
             if (optionalUser.isPresent()) {
                 User user = optionalUser.get();
-                
+
                 Requests.deleteKey(unActiveUsersMapByUsernameAndTokenId.get(username));
 
                 user.setToken(null);
