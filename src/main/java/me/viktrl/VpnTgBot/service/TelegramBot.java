@@ -56,7 +56,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(11, 5);
+            scheduleDailyTask(14, 33);
         } catch (Exception e) {
             log.error("Ошибка при инициализации класса: " + e.getMessage());
         }
@@ -84,8 +84,8 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             switch (message) {
                 case "/start":
-                    sendMessage(chatId, "Привет, " + update.getMessage().getChat().getFirstName());
                     registerUser(update.getMessage());
+                    sendMessage(chatId, "Привет, " + update.getMessage().getChat().getFirstName());
                     break;
                 case "Зарегистрировать ключ":
                     registerKey(update.getMessage());
