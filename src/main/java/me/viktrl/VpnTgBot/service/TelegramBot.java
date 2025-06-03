@@ -56,7 +56,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(14, 33);
+            scheduleDailyTask(14, 00);
         } catch (Exception e) {
             log.error("Ошибка при инициализации класса: " + e.getMessage());
         }
