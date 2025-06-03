@@ -199,23 +199,26 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             User user = userRepository.findById(chatId).get();
+            if(userRepository.findById(message.getFrom().getId()).isPresent()) {
+                if (user.getToken() == null) {
+                    String newKeyId = Requests.registerKey(user.getUsername()).getId();
 
-            if (user.getToken() == null) {
-                String newKeyId = Requests.registerKey(user.getUsername()).getId();
+                    user.setToken(Requests.getAccessKey(newKeyId).getId());
+                    user.setTokenKey(Requests.getAccessKey(newKeyId).getAccessUrl());
+                    userRepository.save(user);
 
-                user.setToken(Requests.getAccessKey(newKeyId).getId());
-                user.setTokenKey(Requests.getAccessKey(newKeyId).getAccessUrl());
-                userRepository.save(user);
+                    String answerToUser = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey()
+                            + "\n\nИспользуйте команду \"Инструкция\", чтобы получить инструкцию к легкой установке и настройке ВПН";
 
-                String answerToUser = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey()
-                        + "\n\nИспользуйте команду \"Инструкция\", чтобы получить инструкцию к легкой установке и настройке ВПН";
-
-                sendMessage(chatId, answerToUser);
+                    sendMessage(chatId, answerToUser);
+                } else {
+                    sendMessage(chatId, "У вас уже есть ключ");
+                }
             } else {
-                sendMessage(chatId, "У вас уже есть ключ");
+                sendMessage(chatId, "Вы не зарегистрированы. Используйте команду /start");
             }
         } catch (Exception e) {
-            sendMessage(chatId, "Что то пошло не так");
+            sendMessage(chatId, "Что то пошло не так. Обратитесь в поддержку");
         }
     }
 
@@ -247,10 +250,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage(chatId, showUserAnswer);
                 }
             } else {
-                sendMessage(chatId, "Вы не зарегистрировались");
+                sendMessage(chatId, "Вы не зарегистрированы. Используйте команду /start");
             }
         } catch (Exception e) {
-            sendMessage(chatId, "Что то пошло не так");
+            sendMessage(chatId, "Что то пошло не так. Обратитесь в поддержку");
         }
     }
 
@@ -259,14 +262,17 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             User user = userRepository.findById(message.getFrom().getId()).get();
-
-            if (user.getTokenKey() != null) {
-                sendMessage(chatId, user.getTokenKey());
+            if (userRepository.findById(message.getFrom().getId()).isPresent()) {
+                if (user.getTokenKey() != null) {
+                    sendMessage(chatId, user.getTokenKey());
+                } else {
+                    sendMessage(chatId, "У вас нет ключа");
+                }
             } else {
-                sendMessage(chatId, "У вас нет ключа");
+                sendMessage(chatId, "Вы не зарегистрированы. Используйте команду /start");
             }
         } catch (Exception e) {
-            sendMessage(chatId, "Что то пошло не так");
+            sendMessage(chatId, "Что то пошло не так. Обратитесь в поддержку");
         }
     }
 
