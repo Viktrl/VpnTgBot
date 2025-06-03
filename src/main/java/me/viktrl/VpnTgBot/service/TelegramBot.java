@@ -4,6 +4,7 @@ import com.google.gson.GsonBuilder;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.viktrl.VpnTgBot.config.BotConfig;
+import me.viktrl.VpnTgBot.model.PromocodesRepository;
 import me.viktrl.VpnTgBot.model.User;
 import me.viktrl.VpnTgBot.model.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     UserRepository userRepository;
+    PromocodesRepository promocodesRepository;
     BotConfig config;
     static String apiUrl;
     static String admin;
@@ -190,14 +192,15 @@ public class TelegramBot extends TelegramLongPollingBot {
                     + user.getUsername() + "\n\nСоздайте токен используя команду \"Зарегистрировать ключ\"";
 
             sendMessage(chatId, AnswerUserSuccessCreated);
+            PromoCodeGenerator promoCodeGenerator = new PromoCodeGenerator(promocodesRepository);
+            promoCodeGenerator.generateAndSaveUniqueCode(user.getChatId());
         }
 
     }
 
     private void registerKey(Message message) {
-        var chatId = message.getChatId();
-
         try {
+            var chatId = message.getChatId();
             User user = userRepository.findById(chatId).get();
             if(userRepository.findById(message.getFrom().getId()).isPresent()) {
                 if (user.getToken() == null) {
@@ -218,7 +221,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                 sendMessage(chatId, "Вы не зарегистрированы. Используйте команду /start");
             }
         } catch (Exception e) {
-            sendMessage(chatId, "Что то пошло не так. Обратитесь в поддержку");
+            log.error("Error yopta: " + e.getMessage());
         }
     }
 
