@@ -118,6 +118,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                                     Теперь у вас есть доступ к свободному интернету. Чтобы убедиться, что вы подключились к серверу, зайдите на 2ip.ru, и проверьте IP.
                                     """);
                     break;
+                case "Оформить подписку":
+                    PaymentService paymentService = new PaymentService();
+                    paymentService.createPayment().getConfirmation().getConfirmationUrl();
+                    break;
+                case "Изменить сервер":
+                    sendMessage(chatId, "В разработке");
+                    break;
                 case "Админ панель":
                     adminPanelCommand(update.getMessage());
                     break;
@@ -156,6 +163,10 @@ public class TelegramBot extends TelegramLongPollingBot {
         if (user.getToken() != null) {
             row.add("Мой ключ");
             row.add("Инструкция");
+            keyboardRows.add(row);
+            row.add("Изменить сервер");
+            keyboardRows.add(row);
+            row.add("Оформить подписку");
             keyboardRows.add(row);
         }
 

@@ -35,6 +35,10 @@
 			<id>clojars.org</id>
 			<url>https://repo.clojars.org</url>
 		</repository>
+		<repository>
+			<id>dynomake.space</id>
+			<url>https://maven.dynomake.space/releases</url>
+		</repository>
 	</repositories>
 
 	<dependencies>
@@ -42,45 +46,43 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-
 		<dependency>
 			<groupId>org.telegram</groupId>
 			<artifactId>telegrambots</artifactId>
 			<version>6.9.7.1</version>
 		</dependency>
-
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>mysql</groupId>
 			<artifactId>mysql-connector-java</artifactId>
 			<version>8.0.33</version>
 		</dependency>
-
 		<dependency>
 			<groupId>com.googlecode.json-simple</groupId>
 			<artifactId>json-simple</artifactId>
 			<version>LATEST</version>
 		</dependency>
-
 		<dependency>
 			<groupId>com.google.code.gson</groupId>
 			<artifactId>gson</artifactId>
 			<version>LATEST</version>
+		</dependency>
+		<dependency>
+			<groupId>space.dynomake</groupId>
+			<artifactId>yookassa-java-sdk</artifactId>
+			<version>1.0.9</version>
 		</dependency>
 	</dependencies>
 
@@ -92,5 +94,4 @@
 			</plugin>
 		</plugins>
 	</build>
-
 </project>
