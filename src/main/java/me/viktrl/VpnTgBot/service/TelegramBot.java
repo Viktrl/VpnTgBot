@@ -4,6 +4,7 @@ import com.google.gson.GsonBuilder;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.viktrl.VpnTgBot.config.BotConfig;
+import me.viktrl.VpnTgBot.model.Promocodes;
 import me.viktrl.VpnTgBot.model.PromocodesRepository;
 import me.viktrl.VpnTgBot.model.User;
 import me.viktrl.VpnTgBot.model.UserRepository;
@@ -38,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     UserRepository userRepository;
+    @Autowired
     PromocodesRepository promocodesRepository;
     BotConfig config;
     static String apiUrl;
@@ -186,16 +188,18 @@ public class TelegramBot extends TelegramLongPollingBot {
             user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
 
             userRepository.save(user);
-//            log.info("User registered: " + user);
 
-            String AnswerUserSuccessCreated = "Добрый день! Вы успешно зарегистрировались.\nВаш логин в системе: "
-                    + user.getUsername() + "\n\nСоздайте токен используя команду \"Зарегистрировать ключ\"";
-
-            sendMessage(chatId, AnswerUserSuccessCreated);
             PromoCodeGenerator promoCodeGenerator = new PromoCodeGenerator(promocodesRepository);
             promoCodeGenerator.generateAndSaveUniqueCode(user.getChatId());
-        }
 
+//            log.info("User registered: " + user);
+
+            Promocodes promoTable = new Promocodes();
+            String AnswerUserSuccessCreated = "Добрый день! Вы успешно зарегистрировались.\nВаш логин в системе: "
+                    + user.getUsername() + "\nВаш промокод: " + promoTable.getCode() + "\n\nСоздайте токен используя команду \"Зарегистрировать ключ\"";
+
+            sendMessage(chatId, AnswerUserSuccessCreated);
+        }
     }
 
     private void registerKey(Message message) {
@@ -245,10 +249,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage(chatId, showAdminAnswer);
                 } else {
                     Double trafficByUser = user.getTrafficUsed();
+                    Promocodes promoTable = new Promocodes();
+                    String code = promoTable.getCode();
                     String showUserAnswer = "Логин: " + user.getUsername() + "\n" +
                             "ID: " + user.getToken() + "\n" +
                             "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                            "Использовано трафика: " + trafficByUser + " GB";
+                            "Использовано трафика: " + trafficByUser + " GB\n" +
+                            "Промокод: " + promoTable.getCode();
 
                     sendMessage(chatId, showUserAnswer);
                 }

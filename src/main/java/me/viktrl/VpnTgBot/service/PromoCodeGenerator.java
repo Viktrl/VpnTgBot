@@ -9,13 +9,13 @@ import java.security.SecureRandom;
 @Service
 public class PromoCodeGenerator {
 
-    private final PromocodesRepository repo;
+    private final PromocodesRepository promocodesRepo;
     private static final String CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final SecureRandom random = new SecureRandom();
     private static final int CODE_LENGTH = 6;
 
     public PromoCodeGenerator(PromocodesRepository repo) {
-        this.repo = repo;
+        this.promocodesRepo = repo;
     }
 
     public String generateCode(int length) {
@@ -26,18 +26,15 @@ public class PromoCodeGenerator {
         return sb.toString();
     }
 
-    public Promocodes generateAndSaveUniqueCode(Long userId) {
-        while (true) {
-            String code = generateCode(CODE_LENGTH);
-            Promocodes promoTable = new Promocodes();
-            promoTable.setCode(code);
-            promoTable.setUserId(userId);
-
-            try {
-                return repo.save(promoTable);
-            } catch (DataIntegrityViolationException e) {
-                // уникальность нарушена, пробуем заново
+    public void generateAndSaveUniqueCode(Long userId) {
+        promocodesRepo.findAll().forEach(el -> {
+            if (el.getUserId() != userId) {
+                Promocodes promoTable = new Promocodes();
+                String code = generateCode(CODE_LENGTH);
+                promoTable.setCode(code);
+                promoTable.setUserId(userId);
+                promocodesRepo.save(promoTable);
             }
-        }
+        });
     }
 }
