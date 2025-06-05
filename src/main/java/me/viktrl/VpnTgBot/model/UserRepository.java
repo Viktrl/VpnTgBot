@@ -12,4 +12,7 @@ public interface UserRepository extends CrudRepository<User, Long> {
 
     @Query("SELECT u.username, u.trafficUsed FROM users u WHERE u.trafficUsed IS NOT NULL")
     List<Object[]> listOfActiveUsers();
+
+    @Query("SELECT u.chatId FROM users u")
+    List<Long> listOfRegisteredUsers();
 }

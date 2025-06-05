@@ -134,7 +134,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                 case "Обновить данные бота":
                     saveInDatabaseTrafficUsedByUser();
                     PromoCodeGenerator promoCodeGenerator = new PromoCodeGenerator(promocodesRepository);
-                    promoCodeGenerator.generateAndSaveUniqueCode(chatId);
+                    for (Long userId : userRepository.listOfRegisteredUsers()) {
+                        promoCodeGenerator.generateAndSaveUniqueCode(userId);
+                    }
                     break;
                 default:
                     sendMessage(chatId, "Этой команды не существует");
@@ -236,7 +238,13 @@ public class TelegramBot extends TelegramLongPollingBot {
             User user = userRepository.findById(chatId).get();
             if(userRepository.findById(message.getFrom().getId()).isPresent()) {
                 if (user.getToken() == null) {
-                    String newKeyId = Requests.registerKey(user.getUsername()).getId();
+                    String newKeyId;
+
+                    if (user.getUsername() != null) {
+                        newKeyId = Requests.registerKey(user.getUsername()).getId();
+                    } else {
+                        newKeyId = Requests.registerKey(String.valueOf(user.getChatId())).getId();
+                    }
 
                     user.setToken(Requests.getAccessKey(newKeyId).getId());
                     user.setTokenKey(Requests.getAccessKey(newKeyId).getAccessUrl());
