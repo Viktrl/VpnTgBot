@@ -27,14 +27,12 @@ public class PromoCodeGenerator {
     }
 
     public void generateAndSaveUniqueCode(Long userId) {
-        promocodesRepo.findAll().forEach(el -> {
-            if (el.getUserId() != userId) {
-                Promocodes promoTable = new Promocodes();
-                String code = generateCode(CODE_LENGTH);
-                promoTable.setCode(code);
-                promoTable.setUserId(userId);
-                promocodesRepo.save(promoTable);
-            }
-        });
+        if (promocodesRepo.findPromocodeByUserId(userId) == null) {
+            String code = generateCode(CODE_LENGTH);
+            Promocodes promo = new Promocodes();
+            promo.setCode(code);
+            promo.setUserId(userId);
+            promocodesRepo.save(promo);
+        }
     }
 }

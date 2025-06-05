@@ -260,14 +260,14 @@ public class TelegramBot extends TelegramLongPollingBot {
         var chatId = message.getChatId();
 
         try {
-            PromoCodeGenerator promoCodeGenerator = new PromoCodeGenerator(promocodesRepository);
-            promoCodeGenerator.generateAndSaveUniqueCode(chatId);
-
-            User user = userRepository.findById(message.getFrom().getId()).get();
-            Long promocode = promocodesRepository.findPromocodeByUserId(chatId);
-            Promocodes promocodes = promocodesRepository.findById(promocode).get();
-
             if (userRepository.findById(message.getFrom().getId()).isPresent()) {
+                PromoCodeGenerator promoCodeGenerator = new PromoCodeGenerator(promocodesRepository);
+                promoCodeGenerator.generateAndSaveUniqueCode(chatId);
+
+                User user = userRepository.findById(message.getFrom().getId()).get();
+                Long promocode = promocodesRepository.findPromocodeByUserId(chatId);
+                Promocodes promocodes = promocodesRepository.findById(promocode).get();
+                
                 if (message.getChat().getUserName().equals(admin)) {
                     Map<String, Double> answerForMe = new LinkedHashMap<>();
                     userRepository.listOfActiveUsers().forEach(arr ->
