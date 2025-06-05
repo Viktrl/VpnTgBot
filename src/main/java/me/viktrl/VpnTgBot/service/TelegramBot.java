@@ -118,10 +118,10 @@ public class TelegramBot extends TelegramLongPollingBot {
                                     Теперь у вас есть доступ к свободному интернету. Чтобы убедиться, что вы подключились к серверу, зайдите на 2ip.ru, и проверьте IP.
                                     """);
                     break;
-                case "Оформить подписку":
-                    PaymentService paymentService = new PaymentService();
-                    sendMessage(chatId, paymentService.createPayment().getConfirmation().getConfirmationUrl());
-                    break;
+//                case "Оформить подписку":
+//                    PaymentService paymentService = new PaymentService();
+//                    sendMessage(chatId, paymentService.createPayment().getConfirmation().getConfirmationUrl());
+//                    break;
                 case "Изменить сервер":
                     sendMessage(chatId, "В разработке");
                     break;
@@ -130,6 +130,9 @@ public class TelegramBot extends TelegramLongPollingBot {
                     break;
                 case "Удалить ключ":
                     showUsersListToKeyDelete(update.getMessage());
+                    break;
+                case "Обновить данные по потреблению":
+                    saveInDatabaseTrafficUsedByUser();
                     break;
                 default:
                     sendMessage(chatId, "Этой команды не существует");
@@ -326,6 +329,10 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             KeyboardRow row = new KeyboardRow();
             row.add("Удалить ключ");
+            keyboardRows.add(row);
+            replyKeyboardMarkup.setKeyboard(keyboardRows);
+
+            row.add("Обновить данные по потреблению");
             keyboardRows.add(row);
             replyKeyboardMarkup.setKeyboard(keyboardRows);
 
