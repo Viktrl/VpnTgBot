@@ -249,32 +249,33 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             User user = userRepository.findById(message.getFrom().getId()).get();
+            Long promocode = promocodesRepository.findPromocodeByUserId(chatId);
+            Promocodes promocodes = promocodesRepository.findById(promocode).get();
+
             if (userRepository.findById(message.getFrom().getId()).isPresent()) {
                 if (message.getChat().getUserName().equals(admin)) {
                     Map<String, Double> answerForMe = new LinkedHashMap<>();
-                    userRepository.findAll().forEach(el -> answerForMe.put(el.getUsername(), el.getTrafficUsed()));
-                    String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create().toJson(answerForMe);
+                    userRepository.listOfActiveUsers().forEach(arr ->
+                            answerForMe.put((String) arr[0], (Double) arr[1])
+                    );
 
-                    List<String> answerInactiveForMe = new LinkedList<>();
-                    answerInactiveForMe.addAll(userRepository.listOfInactiveUsers());
-                    String prettyJsonAnswerInactiveForMe = new GsonBuilder().setPrettyPrinting().create().toJson(answerInactiveForMe);
+                    List<String> answerInactiveForMe = userRepository.listOfInactiveUsers();
 
-                    String showAdminAnswer = "Логин: " + user.getUsername() + "\n" +
-                            "ID: " + user.getToken() + "\n" +
-                            "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                            "Использовано трафика:\n" + prettyJsonAnswerForMe + "\n" +
-                            "Неактивированные пользователи:\n" + prettyJsonAnswerInactiveForMe;
+                    String showAdminAnswer = "Логин: " + user.getUsername() +
+                            "\nID: " + user.getToken() +
+                            "\nКлюч для ВПН: " + user.getTokenKey() +
+                            "\nПромокод: " + promocodes.getCode() +
+                            "\nИспользовано трафика:\n" + new GsonBuilder().setPrettyPrinting().create().toJson(answerForMe) +
+                            "\nНеактивированные пользователи:\n" + new GsonBuilder().setPrettyPrinting().create().toJson(answerInactiveForMe);
 
                     sendMessage(chatId, showAdminAnswer);
                 } else {
                     Double trafficByUser = user.getTrafficUsed();
-                    Promocodes promoTable = new Promocodes();
-                    String code = promoTable.getCode();
-                    String showUserAnswer = "Логин: " + user.getUsername() + "\n" +
-                            "ID: " + user.getToken() + "\n" +
-                            "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                            "Использовано трафика: " + trafficByUser + " GB\n" +
-                            "Промокод: " + promoTable.getCode();
+                    String showUserAnswer = "Логин: " + user.getUsername() +
+                            "\nID: " + user.getToken() +
+                            "\nКлюч для ВПН: " + user.getTokenKey() +
+                            "\nИспользовано трафика: " + trafficByUser + " GB" +
+                            "\nПромокод: " + promocodes.getCode();
 
                     sendMessage(chatId, showUserAnswer);
                 }
