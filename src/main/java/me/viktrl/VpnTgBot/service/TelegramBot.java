@@ -171,10 +171,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             row = new KeyboardRow();
             row.add("Изменить сервер");
             keyboardRows.add(row);
-
-            row = new KeyboardRow();
-            row.add("Оформить подписку");
-            keyboardRows.add(row);
+//
+//            row = new KeyboardRow();
+//            row.add("Оформить подписку");
+//            keyboardRows.add(row);
         }
 
         if (user.getUsername().equals(admin)) {
@@ -330,10 +330,11 @@ public class TelegramBot extends TelegramLongPollingBot {
             KeyboardRow row = new KeyboardRow();
             row.add("Удалить ключ");
             keyboardRows.add(row);
-            replyKeyboardMarkup.setKeyboard(keyboardRows);
 
+            row = new KeyboardRow();
             row.add("Обновить данные по потреблению");
             keyboardRows.add(row);
+
             replyKeyboardMarkup.setKeyboard(keyboardRows);
 
             SendMessage sendMessage = new SendMessage();
