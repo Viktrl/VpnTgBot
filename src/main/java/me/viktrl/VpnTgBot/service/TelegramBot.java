@@ -90,7 +90,6 @@ public class TelegramBot extends TelegramLongPollingBot {
             switch (message) {
                 case "/start":
                     registerUser(update.getMessage());
-                    sendMessage(chatId, "Привет, " + update.getMessage().getChat().getFirstName());
                     break;
                 case "Зарегистрировать ключ":
                     registerKey(update.getMessage());
@@ -165,9 +164,11 @@ public class TelegramBot extends TelegramLongPollingBot {
             row.add("Мой ключ");
             row.add("Инструкция");
             keyboardRows.add(row);
+
             row = new KeyboardRow();
             row.add("Изменить сервер");
             keyboardRows.add(row);
+
             row = new KeyboardRow();
             row.add("Оформить подписку");
             keyboardRows.add(row);
@@ -196,9 +197,11 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         if (userRepository.findById(message.getFrom().getId()).isEmpty()) {
             user.setChatId(chatId);
-            user.setFirstName(message.getFrom().getFirstName());
-            user.setLastName(message.getFrom().getLastName());
-            user.setUsername(message.getFrom().getUserName());
+            if (message.getFrom().getFirstName() != null && message.getFrom().getLastName() != null && message.getFrom().getUserName() != null) {
+                user.setFirstName(message.getFrom().getFirstName());
+                user.setLastName(message.getFrom().getLastName());
+                user.setUsername(message.getFrom().getUserName());
+            }
             user.setRegisteredAt(new Timestamp(System.currentTimeMillis()));
 
             userRepository.save(user);
@@ -213,6 +216,12 @@ public class TelegramBot extends TelegramLongPollingBot {
                     + user.getUsername() + "\nВаш промокод: " + promoTable.getCode() + "\n\nСоздайте токен используя команду \"Зарегистрировать ключ\"";
 
             sendMessage(chatId, AnswerUserSuccessCreated);
+        } else {
+            if (message.getFrom().getFirstName() != null) {
+                sendMessage(chatId, "Привет, " + message.getFrom().getFirstName());
+            } else {
+                sendMessage(chatId, "Привет!");
+            }
         }
     }
 
