@@ -289,6 +289,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                             "\nКлюч для ВПН: " + user.getTokenKey() +
                             "\nПромокод: " + promocodes.getCode() +
                             "\nИспользовано трафика:\n" + new GsonBuilder().setPrettyPrinting().create().toJson(answerForMe) +
+                            "\nНе используют ключ:\n" + new GsonBuilder().setPrettyPrinting().create().toJson(answerForMe) +
                             "\nНеактивированные пользователи:\n" + new GsonBuilder().setPrettyPrinting().create().toJson(answerInactiveForMe);
 
                     sendMessage(chatId, showAdminAnswer);
