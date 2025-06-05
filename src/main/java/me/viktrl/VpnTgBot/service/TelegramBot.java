@@ -334,7 +334,7 @@ public class TelegramBot extends TelegramLongPollingBot {
             keyboardRows.add(row);
 
             row = new KeyboardRow();
-            row.add("Обновить данные по потреблению");
+            row.add("Обновить данные бота");
             keyboardRows.add(row);
 
             replyKeyboardMarkup.setKeyboard(keyboardRows);
