@@ -30,6 +30,8 @@ public class User {
 
     private String tokenKey;
 
+    private Timestamp tokenCreatedAt;
+
     private Double trafficUsed;
 
     @Override
@@ -42,6 +44,7 @@ public class User {
                 ", registeredAt=" + registeredAt +
                 ", token='" + token + '\'' +
                 ", tokenKey='" + tokenKey + '\'' +
+                ", tokenCreatedAt=" + tokenCreatedAt +
                 ", trafficUsed=" + trafficUsed +
                 '}';
     }

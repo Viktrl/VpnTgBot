@@ -36,7 +36,7 @@ public class PaymentService {
                     .savePaymentMethod(true)
                     .confirmation(Confirmation.builder()
                             .type("redirect")
-                            .returnUrl("https://localhost:8080")
+                            .returnUrl("http://vpnium.ru/payment-success")
                             .build())
                     .build();
 

@@ -1,6 +1,7 @@
 package me.viktrl.VpnTgBot.service;
 
 import com.google.gson.GsonBuilder;
+import jakarta.ws.rs.core.Link;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.viktrl.VpnTgBot.config.BotConfig;
@@ -120,7 +121,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     break;
                 case "Оформить подписку":
                     PaymentService paymentService = new PaymentService();
-                    paymentService.createPayment().getConfirmation().getConfirmationUrl();
+                    sendMessage(chatId, paymentService.createPayment().getConfirmation().getConfirmationUrl());
                     break;
                 case "Изменить сервер":
                     sendMessage(chatId, "В разработке");
@@ -164,8 +165,10 @@ public class TelegramBot extends TelegramLongPollingBot {
             row.add("Мой ключ");
             row.add("Инструкция");
             keyboardRows.add(row);
+            row = new KeyboardRow();
             row.add("Изменить сервер");
             keyboardRows.add(row);
+            row = new KeyboardRow();
             row.add("Оформить подписку");
             keyboardRows.add(row);
         }
@@ -223,6 +226,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
                     user.setToken(Requests.getAccessKey(newKeyId).getId());
                     user.setTokenKey(Requests.getAccessKey(newKeyId).getAccessUrl());
+                    user.setTokenCreatedAt(new Timestamp(System.currentTimeMillis()));
                     userRepository.save(user);
 
                     String answerToUser = "Бесплатный ВПН создан. Ключ:\n" + user.getTokenKey()
@@ -248,14 +252,18 @@ public class TelegramBot extends TelegramLongPollingBot {
             if (userRepository.findById(message.getFrom().getId()).isPresent()) {
                 if (message.getChat().getUserName().equals(admin)) {
                     Map<String, Double> answerForMe = new LinkedHashMap<>();
-
                     userRepository.findAll().forEach(el -> answerForMe.put(el.getUsername(), el.getTrafficUsed()));
-
                     String prettyJsonAnswerForMe = new GsonBuilder().setPrettyPrinting().create().toJson(answerForMe);
+
+                    List<String> answerInactiveForMe = new LinkedList<>();
+                    answerInactiveForMe.addAll(userRepository.listOfInactiveUsers());
+                    String prettyJsonAnswerInactiveForMe = new GsonBuilder().setPrettyPrinting().create().toJson(answerInactiveForMe);
+
                     String showAdminAnswer = "Логин: " + user.getUsername() + "\n" +
                             "ID: " + user.getToken() + "\n" +
                             "Ключ для ВПН: " + user.getTokenKey() + "\n" +
-                            "Использовано трафика:\n" + prettyJsonAnswerForMe;
+                            "Использовано трафика:\n" + prettyJsonAnswerForMe + "\n" +
+                            "Неактивированные пользователи:\n" + prettyJsonAnswerInactiveForMe;
 
                     sendMessage(chatId, showAdminAnswer);
                 } else {
