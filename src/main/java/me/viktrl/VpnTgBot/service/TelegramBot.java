@@ -137,6 +137,7 @@ public class TelegramBot extends TelegramLongPollingBot {
                     for (Long userId : userRepository.listOfRegisteredUsers()) {
                         promoCodeGenerator.generateAndSaveUniqueCode(userId);
                     }
+                    sendMessage(chatId, "Данные обновлены");
                     break;
                 default:
                     sendMessage(chatId, "Этой команды не существует");
