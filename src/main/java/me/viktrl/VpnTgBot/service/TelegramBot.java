@@ -9,6 +9,7 @@ import me.viktrl.VpnTgBot.model.Promocodes;
 import me.viktrl.VpnTgBot.model.PromocodesRepository;
 import me.viktrl.VpnTgBot.model.User;
 import me.viktrl.VpnTgBot.model.UserRepository;
+import me.viktrl.VpnTgBot.service.Adminka.AFunc;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
@@ -43,8 +44,8 @@ public class TelegramBot extends TelegramLongPollingBot {
     @Autowired
     PromocodesRepository promocodesRepository;
     BotConfig config;
-    static String apiUrl;
-    static String admin;
+    String apiUrl;
+    String admin;
 
     public TelegramBot(BotConfig config) {
         super(config.getBotToken());
@@ -61,7 +62,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
         try {
             this.execute(new SetMyCommands(listCommand, new BotCommandScopeDefault(), "en"));
-            scheduleDailyTask(14, 00);
+            new Scheduler().scheduleDailyTask(14, 00);
         } catch (Exception e) {
             log.error("Ошибка при инициализации класса: " + e.getMessage());
         }
@@ -81,7 +82,7 @@ public class TelegramBot extends TelegramLongPollingBot {
 
             if (callBackData.startsWith("delete_")) {
                 String username = callBackData.substring(7);
-                deleteKeyByUsername(chatId, username);
+                new AFunc().deleteKeyByUsername(chatId, username);
             }
         } else if (update.hasMessage() && update.getMessage().hasText()) {
             String message = update.getMessage().getText();
@@ -126,13 +127,13 @@ public class TelegramBot extends TelegramLongPollingBot {
                     sendMessage(chatId, "В разработке");
                     break;
                 case "Админ панель":
-                    adminPanelCommand(update.getMessage());
+                    new AFunc().adminPanelCommand(update.getMessage(), admin);
                     break;
                 case "Удалить ключ":
-                    showUsersListToKeyDelete(update.getMessage());
+                    new AFunc().showUsersListToKeyDelete(update.getMessage(), admin);
                     break;
                 case "Обновить данные бота":
-                    saveInDatabaseTrafficUsedByUser();
+                    new Scheduler().saveInDatabaseTrafficUsedByUser();
                     PromoCodeGenerator promoCodeGenerator = new PromoCodeGenerator(promocodesRepository);
                     for (Long userId : userRepository.listOfRegisteredUsers()) {
                         promoCodeGenerator.generateAndSaveUniqueCode(userId);
@@ -145,7 +146,7 @@ public class TelegramBot extends TelegramLongPollingBot {
         }
     }
 
-    private void sendMessage(Long chatId, String textToSend) {
+    public void sendMessage(Long chatId, String textToSend) {
         SendMessage message = new SendMessage();
 
         User user = userRepository.findById(chatId).get();
@@ -327,189 +328,5 @@ public class TelegramBot extends TelegramLongPollingBot {
         } catch (Exception e) {
             sendMessage(chatId, "Что то пошло не так. Обратитесь в поддержку");
         }
-    }
-
-    private void adminPanelCommand(Message message) {
-        var chatId = message.getChatId();
-        User user = userRepository.findById(chatId).get();
-
-        if (user.getUsername().equals(admin)) {
-            ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
-            replyKeyboardMarkup.setResizeKeyboard(true);
-            List<KeyboardRow> keyboardRows = new ArrayList<>();
-
-            KeyboardRow row = new KeyboardRow();
-            row.add("Удалить ключ");
-            keyboardRows.add(row);
-
-            row = new KeyboardRow();
-            row.add("Обновить данные бота");
-            keyboardRows.add(row);
-
-            replyKeyboardMarkup.setKeyboard(keyboardRows);
-
-            SendMessage sendMessage = new SendMessage();
-            sendMessage.setChatId(chatId);
-            sendMessage.setText("Добро пожаловать в админ-панель!");
-            sendMessage.setReplyMarkup(replyKeyboardMarkup);
-
-            try {
-                execute(sendMessage);
-            } catch (TelegramApiException e) {
-                log.error("Error yopta: " + e.getMessage());
-            }
-        }
-    }
-
-    private void showUsersListToKeyDelete(Message message) {
-        var chatId = message.getChatId();
-        User user = userRepository.findById(chatId).get();
-
-        if (user.getUsername().equals(admin)) {
-            InlineKeyboardMarkup inlineKeyboardMarkup = new InlineKeyboardMarkup();
-            List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-
-            userRepository.findAll().forEach(el -> {
-                if (el.getTokenKey() != null && el.getTrafficUsed() == null) {
-                    InlineKeyboardButton buttonRow = new InlineKeyboardButton();
-                    buttonRow.setText(el.getUsername());
-                    buttonRow.setCallbackData("delete_" + el.getUsername()); // Уникальная callback data
-                    rowsInline.add(Collections.singletonList(buttonRow));
-                }
-            });
-
-            SendMessage sendMessage = new SendMessage();
-            sendMessage.setChatId(chatId);
-            sendMessage.setText("Выберите пользователя для удаления ключа:");
-            inlineKeyboardMarkup.setKeyboard(rowsInline);
-            sendMessage.setReplyMarkup(inlineKeyboardMarkup);
-
-            try {
-                execute(sendMessage);
-            } catch (TelegramApiException e) {
-                log.error("Error while sending inline keyboard: " + e.getMessage());
-            }
-        }
-    }
-
-    private void deleteKeyByUsername(Long chatId, String username) {
-        Map<String, String> unActiveUsersMapByUsernameAndTokenId = new LinkedHashMap<>();
-
-        userRepository.findAll().forEach(el -> {
-            if (el.getTokenKey() != null && el.getTrafficUsed() == null) {
-                unActiveUsersMapByUsernameAndTokenId.put(el.getUsername(), el.getToken());
-            }
-        });
-
-        Map<String, Long> unActiveUsersMapByUsernameAndChatId = new LinkedHashMap<>();
-
-        userRepository.findAll().forEach(el -> {
-            if (el.getTokenKey() != null && el.getTrafficUsed() == null) {
-                unActiveUsersMapByUsernameAndChatId.put(el.getUsername(), el.getChatId());
-            }
-        });
-
-        Optional<User> optionalUser = userRepository.findById(unActiveUsersMapByUsernameAndChatId.get(username));
-
-        try {
-            if (optionalUser.isPresent()) {
-                User user = optionalUser.get();
-
-                Requests.deleteKey(unActiveUsersMapByUsernameAndTokenId.get(username));
-
-                user.setToken(null);
-                user.setTokenKey(null);
-                userRepository.save(user);
-
-                String answerToUser = "Ключ пользователя " + unActiveUsersMapByUsernameAndTokenId.get(username) + " удален";
-                sendMessage(chatId, answerToUser);
-            } else {
-                sendMessage(chatId, "Пользователь не найден");
-            }
-        } catch (Exception e) {
-            log.error("Error in deleteKeyByUsername method: " + e.getMessage());
-        }
-    }
-
-    public void sendUserMessageAboutTrafficUsed() {
-        try {
-            Map<Long, Double> activeUsersMapByChatIdAndTrafficUsed = new LinkedHashMap<>();
-
-            userRepository.findAll().forEach(el -> {
-                if (el.getTrafficUsed() != null) {
-                    activeUsersMapByChatIdAndTrafficUsed.put(el.getChatId(), el.getTrafficUsed());
-                }
-            });
-
-            for (Long chatId : activeUsersMapByChatIdAndTrafficUsed.keySet()) {
-                sendMessage(chatId, "Использовано трафика: " + activeUsersMapByChatIdAndTrafficUsed.get(chatId) + " GB");
-            }
-
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void saveInDatabaseTrafficUsedByUser() {
-        try {
-            Map<String, Long> activeUsersMapByTokenIdAndChatId = new HashMap<>();
-
-            userRepository.findAll().forEach(el -> {
-                try {
-                    if (Requests.getUsedTrafficByUser().containsKey(el.getToken())) {
-                        activeUsersMapByTokenIdAndChatId.put(el.getToken(), el.getChatId());
-                    }
-                } catch (IOException e) {
-                    System.out.println("Ошибка в saveInDatabaseTrafficUsedByUser(): " + e.getMessage());
-                }
-            });
-
-            for (String activeToken : activeUsersMapByTokenIdAndChatId.keySet()) {
-                User user = userRepository.findById(activeUsersMapByTokenIdAndChatId.get(activeToken)).get();
-                Map<String, Double> getUsedTrafficByUserInGb = new LinkedHashMap<>();
-
-                Requests.getUsedTrafficByUser().entrySet()
-                        .stream()
-                        .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                        .forEachOrdered(e -> getUsedTrafficByUserInGb.put(e.getKey(),
-                                Math.round((e.getValue() / 1_073_741_824.0) * 100.0) / 100.0));
-
-                user.setTrafficUsed(getUsedTrafficByUserInGb.get(activeToken));
-                userRepository.save(user);
-            }
-        } catch (Exception e) {
-            System.out.println(
-                    "Ошибка при сохранении в БД трафка пользователей: " + e.getMessage() + "\n" + e.getStackTrace());
-        }
-    }
-
-    private void scheduleDailyTask(int targetHour, int targetMinute) {
-        try {
-            ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-
-            Runnable task = () -> {
-                System.out.println("Запуск задачи: " + LocalDateTime.now());
-                saveInDatabaseTrafficUsedByUser();
-                sendUserMessageAboutTrafficUsed();
-            };
-
-            long initialDelay = calculateInitialDelay(targetHour, targetMinute);
-            long period = 24 * 60 * 60; // 24 часа в секундах
-
-            scheduler.scheduleAtFixedRate(task, initialDelay, period, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            System.out.println("Ошибка при выполннии задачи по расаписанию" + e.getMessage());
-        }
-    }
-
-    private long calculateInitialDelay(int targetHour, int targetMinute) {
-        ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Europe/Moscow"));
-        ZonedDateTime nextRun = now.withHour(targetHour).withMinute(targetMinute).withSecond(0);
-
-        if (now.compareTo(nextRun) > 0) {
-            nextRun = nextRun.plusDays(1);
-        }
-
-        return Duration.between(now, nextRun).getSeconds();
     }
 }

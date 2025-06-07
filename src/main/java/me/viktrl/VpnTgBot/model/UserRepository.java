@@ -2,6 +2,7 @@ package me.viktrl.VpnTgBot.model;
 
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Map;
@@ -15,4 +16,7 @@ public interface UserRepository extends CrudRepository<User, Long> {
 
     @Query("SELECT u.chatId FROM users u")
     List<Long> listOfRegisteredUsers();
+
+    @Query("SELECT tokenKey FROM users WHERE chatId = :chatId")
+    String queryShowServers(@Param("chatId") Long chatId);
 }
